@@ -2,6 +2,7 @@ import path from 'node:path';
 import { promises as fsp } from 'node:fs';
 
 import { filterTrailing24h, parseFirmsCsv } from '../../src/data/firmsCsv.js';
+import { fetchInpeFocos, inpeFocosEnabled } from './inpe/focos.js';
 
 /**
  * NASA FIRMS live active-fire proxy with a memory + disk cache.
@@ -124,6 +125,46 @@ export function firmsProxy() {
    * Cache entry → response payload. Fires are RE-filtered to the trailing
    * 24 h at serve time so a stale cache never serves >24h-old detections.
    */
+  // barreto.top: merge INPE (Programa Queimadas) Brazilian fire foci into the
+  // same feed. With a FIRMS key, only satellites FIRMS lacks are added (GOES,
+  // MetOp, MSG); without one, INPE alone powers the layer over Brazil.
+  async function refreshAll(key) {
+    const inpe = inpeFocosEnabled();
+    let base = null;
+    if (key) {
+      try {
+        base = await refreshUpstream(key);
+      } catch (err) {
+        if (!inpe) throw err;
+        console.warn(
+          '[firms-proxy] FIRMS failed, INPE only:',
+          err?.message || err,
+        );
+      }
+    }
+    if (!inpe) return base;
+    const now = Date.now();
+    const entry = base || { at: now, sources: [], fires: [] };
+    try {
+      const { records } = await fetchInpeFocos({
+        now,
+        withFirms: Boolean(base),
+      });
+      const recent = filterTrailing24h(records, now);
+      for (const record of recent) entry.fires.push(record);
+      entry.sources.push({
+        source: 'INPE_QUEIMADAS',
+        count: recent.length,
+        ok: true,
+      });
+    } catch (err) {
+      console.warn('[inpe-focos] refresh failed:', err?.message || err);
+      entry.sources.push({ source: 'INPE_QUEIMADAS', count: 0, ok: false });
+      if (!base) throw err;
+    }
+    return entry;
+  }
+
   function buildPayload(entry, stale) {
     const fires = filterTrailing24h(entry.fires, Date.now());
     return {
@@ -191,7 +232,7 @@ export function firmsProxy() {
         if (subPath === '/status') {
           if (!key) {
             sendJson(200, {
-              hasKey: false,
+              hasKey: inpeFocosEnabled(),
               lastFetch: null,
               count: null,
               stale: false,
@@ -212,7 +253,7 @@ export function firmsProxy() {
           return;
         }
 
-        if (!key) {
+        if (!key && !inpeFocosEnabled()) {
           sendJson(503, { error: 'no_key' });
           return;
         }
@@ -226,7 +267,7 @@ export function firmsProxy() {
         // share one upstream pass). Capture the promise locally BEFORE
         // awaiting: the .finally() nulls `inflight` the moment it settles.
         if (!inflight) {
-          inflight = refreshUpstream(key)
+          inflight = refreshAll(key)
             .then(async (fresh) => {
               mem = fresh;
               await writeDisk(fresh);

@@ -47,5 +47,13 @@ export function satelliteShortName(satellite) {
   if (s === 'N20' || s === 'NOAA-20') return 'N20';
   if (s === 'N21' || s === 'NOAA-21') return 'N21';
   if (s === 'N' || s === 'NPP' || s === 'SUOMI NPP') return 'SNPP';
+  // INPE (Brazil) satellite codes
+  if (s === 'NPP-375') return 'SNPP';
+  let m = /^GOES-(\d+)$/.exec(s);
+  if (m) return `G${m[1]}`;
+  m = /^METOP-([A-C])$/.exec(s);
+  if (m) return `MetOp${m[1]}`;
+  m = /^MSG-0?(\d+)$/.exec(s);
+  if (m) return `MSG${m[1]}`;
   return s ? s.slice(0, 6) : '';
 }
