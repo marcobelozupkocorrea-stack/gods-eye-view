@@ -8,6 +8,11 @@ import {
   keySetupWithAlternatives,
 } from '../keySetupCore.mjs';
 import { createWeatherPanel } from './weatherPanel.js';
+import {
+  groupLabel,
+  layerLabel,
+  stateLabel as translateState,
+} from './ptBr.js';
 const FEED_STATE_LABELS = Object.freeze({
   nominal: 'ON',
   loading: 'LOADING',
@@ -55,6 +60,7 @@ const PANEL_GROUPS = [
     label: 'Weather',
     ids: [
       'inmet-alerts',
+      'defesa-civil-alerts',
       'wind',
       'weather-radar',
       'weather-satellite',
@@ -82,10 +88,11 @@ const PANEL_LABELS = {
   'local-datacenters': 'Data Centers',
   'local-firms': 'Active Fires',
   'inmet-alerts': 'Alertas INMET (Brasil)',
+  'defesa-civil-alerts': 'Alertas Defesa Civil (Brasil)',
 };
 
 function panelLabel(layer) {
-  return PANEL_LABELS[layer.id] || layer.name;
+  return layerLabel(layer.id) || PANEL_LABELS[layer.id] || layer.name;
 }
 
 /**
@@ -217,7 +224,7 @@ export class LayerPanel {
       if (group && group !== previousGroup) {
         const heading = document.createElement('h3');
         heading.className = 'data-layer-group-heading';
-        heading.textContent = group;
+        heading.textContent = groupLabel(group);
         this._toggleContainer.appendChild(heading);
       }
       previousGroup = group;
@@ -530,12 +537,12 @@ export class LayerPanel {
   _buildMetaText(layer) {
     const stats = layer.stats || {};
     const feedState = layerFeedState(stats);
-    const stateLabel = FEED_STATE_LABELS[feedState];
+    const stateLabel = translateState(FEED_STATE_LABELS[feedState]);
     const source = stats.source || layer.source;
     const lifecycleState =
       layer.lifecycleState || (layer.enabled ? 'enabled' : 'disabled');
     if (lifecycleState === 'enabling' || lifecycleState === 'disabling') {
-      return `${lifecycleState.toUpperCase()} · ${source}`;
+      return `${translateState(lifecycleState.toUpperCase())} · ${source}`;
     }
     if (layer.lifecycleUncertain) {
       return `UNCERTAIN · ${source} · lifecycle state requires reconciliation`;
@@ -632,13 +639,15 @@ export class LayerPanel {
       String(transitioning || (unavailable && !layer.enabled)),
     );
     button.setAttribute('aria-busy', String(transitioning));
-    button.textContent = transitioning
-      ? layer.lifecycleState.toUpperCase()
-      : uncertain
-        ? 'UNCERTAIN'
-        : layer.enabled || unavailable
-          ? FEED_STATE_LABELS[feedState]
-          : 'OFF';
+    button.textContent = translateState(
+      transitioning
+        ? layer.lifecycleState.toUpperCase()
+        : uncertain
+          ? 'UNCERTAIN'
+          : layer.enabled || unavailable
+            ? FEED_STATE_LABELS[feedState]
+            : 'OFF',
+    );
     const keyGuidance = unavailable
       ? String(layer.stats.error || 'Data source unavailable')
       : layerKeyRequirementTooltip(layer);
