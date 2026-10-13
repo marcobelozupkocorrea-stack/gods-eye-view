@@ -35,6 +35,7 @@ export function adaptFirmsRecords(records) {
       satellite: typeof record.satellite === 'string' ? record.satellite : '',
       contextEntity: null,
       position: null,
+      ...inpePlace(record),
     });
   }
   return fires;
@@ -109,4 +110,18 @@ function clamp01(value) {
 function finiteNumber(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
+}
+
+/** INPE records carry Brazilian place details; FIRMS records do not. */
+function inpePlace(record) {
+  if (record?.provider !== 'INPE') return {};
+  return {
+    place: {
+      municipio: String(record.municipio || ''),
+      estado: String(record.estado || ''),
+      bioma: String(record.bioma || ''),
+      riscoFogo: String(record.riscoFogo ?? ''),
+      diasSemChuva: String(record.diasSemChuva ?? ''),
+    },
+  };
 }

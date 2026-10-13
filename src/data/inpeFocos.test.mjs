@@ -83,3 +83,39 @@ test('INPE satellite codes get short display names', () => {
   assert.equal(satelliteShortName('NPP-375'), 'SNPP');
   assert.equal(satelliteShortName('NOAA-20'), 'N20');
 });
+
+test('INPE place details survive the adapter and format for cards', async () => {
+  const { inpePlaceLines, inpeFireRiskLabel, titleCasePt, ufForState } =
+    await import('./firmsLabels.js');
+  const [fire] = adaptFirmsRecords(parseInpeFocosCsv(CSV).slice(1));
+  assert.deepEqual(fire.place, {
+    municipio: 'ALENQUER',
+    estado: 'PARÁ',
+    bioma: 'Amazônia',
+    riscoFogo: '0.8',
+    diasSemChuva: '12',
+  });
+  assert.deepEqual(inpePlaceLines(fire.place), {
+    where: 'Alenquer/PA',
+    context: 'Amazônia · risco alto · 12 dias sem chuva',
+  });
+  assert.equal(titleCasePt('SÃO JOSÉ DO RIO PRETO'), 'São José do Rio Preto');
+  assert.equal(ufForState('mato grosso do sul'), 'MS');
+  assert.equal(inpeFireRiskLabel(''), '');
+  assert.equal(inpeFireRiskLabel('0.1'), 'mínimo');
+  assert.equal(inpeFireRiskLabel('1'), 'crítico');
+  assert.deepEqual(inpePlaceLines(null), { where: '', context: '' });
+});
+
+test('FIRMS records do not gain a place field', () => {
+  const [fire] = adaptFirmsRecords([
+    {
+      lat: 1,
+      lon: 2,
+      acqDate: '2026-10-13',
+      acqTime: '1200',
+      instrument: 'VIIRS',
+    },
+  ]);
+  assert.equal('place' in fire, false);
+});

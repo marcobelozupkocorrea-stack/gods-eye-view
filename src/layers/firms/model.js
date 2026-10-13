@@ -3,6 +3,7 @@ import {
   satelliteShortName,
   fireDetectionKey,
   accentForSeverity,
+  inpePlaceLines,
 } from '../../data/firmsLabels.js';
 import {
   VIEW_PADDING,
@@ -49,6 +50,13 @@ export function createModel({
       sensor: text(fire?.sensor), // VIIRS or MODIS
       acqTime:
         Number.isFinite(fire?.acqMs) && fire.acqMs > 0 ? fire.acqMs : null, // epoch ms; 0 = unparseable → null
+      ...(fire?.place
+        ? {
+            municipality: text(fire.place.municipio),
+            state: text(fire.place.estado),
+            biome: text(fire.place.bioma),
+          }
+        : {}),
     };
   }
 
@@ -328,6 +336,13 @@ export function createModel({
    * @returns {Object} firmsLabels entry.
    */
 
+  /** INPE place lines for the detail card ("Coroatá/MA", "Cerrado · risco alto"). */
+  function placeDetails(fire) {
+    if (!fire.place) return [];
+    const { where, context } = inpePlaceLines(fire.place);
+    return [where, context].filter(Boolean);
+  }
+
   function buildSelectedFireCard(fire, nowMs) {
     const meta = [`${confidenceBucket(fire.confidence)} conf`];
     if (fire.acqMs > 0) {
@@ -348,6 +363,7 @@ export function createModel({
       accent: accentForSeverity(detectionColorStop(fire).name),
       title: `FIRE · ${formatFrp(fire.frp)} MW`,
       details: [
+        ...placeDetails(fire),
         meta.join(' · '),
         formatLatLon(fire.lat, fire.lon) + (fire.night ? ' · NIGHT' : ''),
       ],
@@ -383,7 +399,9 @@ export function createModel({
       gapPx: frpPixelSize(fire.frp),
       accent: accentForSeverity(detectionColorStop(fire).name),
       title: `▲ ${formatFrp(fire.frp)} MW`,
-      details: [meta.join(' · ')],
+      details: fire.place
+        ? [inpePlaceLines(fire.place).where, meta.join(' · ')].filter(Boolean)
+        : [meta.join(' · ')],
       selected: false,
       priority: Number(fire.frp) || 0,
     };

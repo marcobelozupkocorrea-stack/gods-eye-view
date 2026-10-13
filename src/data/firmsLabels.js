@@ -57,3 +57,99 @@ export function satelliteShortName(satellite) {
   if (m) return `MSG${m[1]}`;
   return s ? s.slice(0, 6) : '';
 }
+
+// ── INPE (Brazil) place details ─────────────────────────────────────────────
+
+const UF_BY_STATE = Object.freeze({
+  ACRE: 'AC',
+  ALAGOAS: 'AL',
+  AMAPÁ: 'AP',
+  AMAZONAS: 'AM',
+  BAHIA: 'BA',
+  CEARÁ: 'CE',
+  'DISTRITO FEDERAL': 'DF',
+  'ESPÍRITO SANTO': 'ES',
+  GOIÁS: 'GO',
+  MARANHÃO: 'MA',
+  'MATO GROSSO': 'MT',
+  'MATO GROSSO DO SUL': 'MS',
+  'MINAS GERAIS': 'MG',
+  PARÁ: 'PA',
+  PARAÍBA: 'PB',
+  PARANÁ: 'PR',
+  PERNAMBUCO: 'PE',
+  PIAUÍ: 'PI',
+  'RIO DE JANEIRO': 'RJ',
+  'RIO GRANDE DO NORTE': 'RN',
+  'RIO GRANDE DO SUL': 'RS',
+  RONDÔNIA: 'RO',
+  RORAIMA: 'RR',
+  'SANTA CATARINA': 'SC',
+  'SÃO PAULO': 'SP',
+  SERGIPE: 'SE',
+  TOCANTINS: 'TO',
+});
+
+const LOWER_WORDS = new Set(['da', 'de', 'do', 'das', 'dos', 'e', "d'"]);
+
+/** "SÃO JOSÉ DO RIO PRETO" → "São José do Rio Preto". */
+export function titleCasePt(text) {
+  return String(text || '')
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word, i) =>
+      i > 0 && LOWER_WORDS.has(word)
+        ? word
+        : word.charAt(0).toUpperCase() + word.slice(1),
+    )
+    .join(' ');
+}
+
+/** Full Brazilian state name (any case) → UF code, or '' when unknown. */
+export function ufForState(state) {
+  return (
+    UF_BY_STATE[
+      String(state || '')
+        .trim()
+        .toUpperCase()
+    ] || ''
+  );
+}
+
+/**
+ * INPE "risco de fogo" (0–1) → Portuguese class used by the Programa
+ * Queimadas: mínimo, baixo, médio, alto, crítico. '' when absent.
+ */
+export function inpeFireRiskLabel(value) {
+  if (value === '' || value === null || value === undefined) return '';
+  const risk = Number(value);
+  if (!Number.isFinite(risk) || risk < 0) return '';
+  if (risk < 0.15) return 'mínimo';
+  if (risk < 0.4) return 'baixo';
+  if (risk < 0.7) return 'médio';
+  if (risk < 0.95) return 'alto';
+  return 'crítico';
+}
+
+/**
+ * Card lines for an INPE fire's `place` ({municipio, estado, bioma,
+ * riscoFogo, diasSemChuva}). Returns { where, context } strings, either of
+ * which may be ''. `where` is "Coroatá/MA"; `context` is
+ * "Cerrado · risco alto · 12 dias sem chuva".
+ */
+export function inpePlaceLines(place) {
+  if (!place) return { where: '', context: '' };
+  const city = titleCasePt(place.municipio);
+  const uf = ufForState(place.estado);
+  const where = city && uf ? `${city}/${uf}` : city || uf;
+  const context = [];
+  if (place.bioma) context.push(String(place.bioma).trim());
+  const risk = inpeFireRiskLabel(place.riscoFogo);
+  if (risk) context.push(`risco ${risk}`);
+  const dry = Number(place.diasSemChuva);
+  if (place.diasSemChuva !== '' && Number.isFinite(dry) && dry >= 0)
+    context.push(`${dry} ${dry === 1 ? 'dia' : 'dias'} sem chuva`);
+  return { where, context: context.join(' · ') };
+}
