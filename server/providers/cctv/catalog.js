@@ -20,6 +20,7 @@ import {
   loadDelDOTSourcesFromOpenData,
   loadVegvesenSourcesFromOpenData,
 } from './sources.js';
+import { loadDerSpSources, loadCetSpSources } from './brazil.js';
 
 /** Env kill switch: unset or anything but "0" means enabled. */
 const envEnabled = (name) => String(process.env[name] || '1').trim() !== '0';
@@ -97,6 +98,17 @@ const LIVE_PACKS = [
     name: 'vegvesen',
     enabled: () => envEnabled('CCTV_VEGVESEN_ENABLED'),
     load: loadVegvesenSourcesFromOpenData,
+  },
+  // barreto.top: Brazilian packs (server/providers/cctv/brazil.js).
+  {
+    name: 'dersp',
+    enabled: () => envEnabled('CCTV_DERSP_ENABLED'),
+    load: () => loadDerSpSources(),
+  },
+  {
+    name: 'cetsp',
+    enabled: () => envEnabled('CCTV_CETSP_ENABLED'),
+    load: () => loadCetSpSources(),
   },
 ];
 /**
