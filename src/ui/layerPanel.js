@@ -54,6 +54,7 @@ const PANEL_GROUPS = [
   {
     label: 'Weather',
     ids: [
+      'inmet-alerts',
       'wind',
       'weather-radar',
       'weather-satellite',
@@ -80,6 +81,7 @@ const PANEL_LABELS = {
   'alpr-cameras': 'Mapped ALPR Cameras',
   'local-datacenters': 'Data Centers',
   'local-firms': 'Active Fires',
+  'inmet-alerts': 'Alertas INMET (Brasil)',
 };
 
 function panelLabel(layer) {

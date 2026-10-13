@@ -607,6 +607,13 @@ export const LAYER_STATE_REGISTRY = Object.freeze([
     disposition: 'enabled+options',
     optionOwner: 'flights',
   }),
+  Object.freeze({
+    // barreto.top fork: a token far from upstream's allocation sequence so
+    // future upstream layers never collide with it.
+    id: 'inmet-alerts',
+    token: 'zb',
+    disposition: 'enabled-only',
+  }),
   Object.freeze({ id: 'local-dams', token: 'q', disposition: 'enabled-only' }),
   Object.freeze({
     id: 'local-datacenters',

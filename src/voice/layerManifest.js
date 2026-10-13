@@ -193,6 +193,29 @@ const layers = [
     },
   },
   {
+    id: 'inmet-alerts',
+    aliases: [
+      'inmet',
+      'inmet alerts',
+      'brazil weather alerts',
+      'brazilian weather warnings',
+      'alertas inmet',
+      'avisos do inmet',
+      'avisos meteorológicos',
+    ],
+    context: false,
+    query: {
+      fields: {
+        event: ['t'],
+        severity: ['t'],
+        states: ['t'],
+        onset: ['ms'],
+        expires: ['ms'],
+      },
+      timeField: 'onset',
+    },
+  },
+  {
     id: 'weather-cyclones',
     aliases: ['cyclones', 'hurricanes', 'typhoons', 'tropical storms'],
     context: false,
