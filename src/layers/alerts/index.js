@@ -1,15 +1,19 @@
 import * as Cesium from 'cesium';
+import { CAP_SEVERITY } from '../../data/capAlerts.js';
 import { INMET_SEVERITY } from '../../data/inmetCap.js';
 import {
+  DEFESA_CIVIL_OVERLAY_SOURCE_ID,
   INMET_OVERLAY_SOURCE_ID,
+  alertAccent,
+  alertAnchorDegrees,
+  buildAlertCard,
   buildInmetCard,
-  inmetAccent,
-  inmetAnchorDegrees,
 } from './cards.js';
-export { createInmetAlertSource } from './source.js';
+export {
+  createInmetAlertSource,
+  createDefesaCivilAlertSource,
+} from './source.js';
 export * from './cards.js';
-
-const PICK_PREFIX = 'inmet-alert:';
 const CARD_HOST_OPTIONS = Object.freeze({
   cohortLimit: 1,
   collisionCapacity: 1,
@@ -19,8 +23,52 @@ const CARD_HOST_OPTIONS = Object.freeze({
 const ringPositions = (ring) =>
   ring.map(([lon, lat]) => Cesium.Cartesian3.fromDegrees(lon, lat));
 
-/** Own the INMET warning polygons, their refresh and click selection. */
-export function createInmetAlertsLayer({
+/** INMET weather warnings (Brazil). */
+export function createInmetAlertsLayer(options = {}) {
+  return createCapAlertsLayer({
+    id: 'inmet-alerts',
+    name: 'Alertas INMET',
+    icon: '⚠',
+    sourceLabel: 'INMET · Avisos',
+    overlaySourceId: INMET_OVERLAY_SOURCE_ID,
+    scale: INMET_SEVERITY,
+    buildCard: buildInmetCard,
+    blurb:
+      'Avisos meteorológicos ativos do INMET. Toque numa área para ver o aviso.',
+    ...options,
+  });
+}
+
+/** Defesa Civil alerts from the national IDAP feed (Brazil). */
+export function createDefesaCivilAlertsLayer(options = {}) {
+  return createCapAlertsLayer({
+    id: 'defesa-civil-alerts',
+    name: 'Alertas Defesa Civil',
+    icon: '🚨',
+    sourceLabel: 'Defesa Civil · IDAP',
+    overlaySourceId: DEFESA_CIVIL_OVERLAY_SOURCE_ID,
+    scale: CAP_SEVERITY,
+    buildCard: (row, now) =>
+      buildAlertCard(row, now, {
+        idPrefix: 'defesa-civil-card',
+        source: 'Defesa Civil',
+      }),
+    blurb:
+      'Alertas emitidos pelas Defesas Civis (IDAP). Toque numa área para ver o alerta.',
+    ...options,
+  });
+}
+
+/** Own one set of CAP warning polygons, their refresh and click selection. */
+export function createCapAlertsLayer({
+  id,
+  name,
+  icon,
+  sourceLabel,
+  overlaySourceId,
+  scale = CAP_SEVERITY,
+  buildCard = buildAlertCard,
+  blurb = '',
   source,
   overlayHost = null,
   screenSpaceEventHandlerFactory = null,
@@ -28,7 +76,9 @@ export function createInmetAlertsLayer({
   pointer = null,
 } = {}) {
   if (typeof source?.getSnapshot !== 'function')
-    throw new TypeError('INMET alerts require a snapshot source');
+    throw new TypeError(`${name} requires a snapshot source`);
+  const PICK_PREFIX = `${id}:`;
+  const OVERLAY_ID = overlaySourceId;
   let _viewer = null;
   let _request = null;
   let _dataSource = null;
@@ -50,14 +100,14 @@ export function createInmetAlertsLayer({
     const row = _selectedId ? _rowById.get(_selectedId) : null;
     if (!row) {
       _selectedId = null;
-      overlayHost.setEntries(INMET_OVERLAY_SOURCE_ID, [], CARD_HOST_OPTIONS);
+      overlayHost.setEntries(OVERLAY_ID, [], CARD_HOST_OPTIONS);
       return;
     }
     overlayHost.setEntries(
-      INMET_OVERLAY_SOURCE_ID,
+      OVERLAY_ID,
       [
         {
-          ...buildInmetCard(row, Date.now()),
+          ...buildCard(row, Date.now()),
           position: Cesium.Cartesian3.fromDegrees(
             row.anchor.lon,
             row.anchor.lat,
@@ -77,11 +127,11 @@ export function createInmetAlertsLayer({
       const pickId = picking.resolvePickId(picked);
       if (typeof pickId !== 'string' || !pickId.startsWith(PICK_PREFIX))
         continue;
-      const id = pickId.slice(PICK_PREFIX.length).split(':')[0];
-      const row = _rowById.get(id);
+      const warningId = pickId.slice(PICK_PREFIX.length).split(':')[0];
+      const row = _rowById.get(warningId);
       if (row && row.severityRank > bestRank) {
         bestRank = row.severityRank;
-        bestId = id;
+        bestId = warningId;
       }
     }
     return bestId;
@@ -104,9 +154,9 @@ export function createInmetAlertsLayer({
         )
           return;
       }
-      const id = picked ? pickedWarningId(click.position) : null;
-      if (id) {
-        _selectedId = id;
+      const warningId = picked ? pickedWarningId(click.position) : null;
+      if (warningId) {
+        _selectedId = warningId;
         publishSelectedCard();
         return;
       }
@@ -127,22 +177,22 @@ export function createInmetAlertsLayer({
   function clearSelection() {
     _selectedId = null;
     if (overlayHost) {
-      overlayHost.clearSource(INMET_OVERLAY_SOURCE_ID);
-      overlayHost.setVisible?.(INMET_OVERLAY_SOURCE_ID, false);
+      overlayHost.clearSource(OVERLAY_ID);
+      overlayHost.setVisible?.(OVERLAY_ID, false);
     }
   }
 
   const layer = {
-    id: 'inmet-alerts',
-    name: 'Alertas INMET',
-    icon: '⚠',
-    source: 'INMET · Avisos',
+    id,
+    name,
+    icon,
+    source: sourceLabel,
     updateInterval: 600000,
 
     init(viewer) {
-      if (_viewer) throw new Error('INMET alert layer is already initialized');
+      if (_viewer) throw new Error(`${name} layer is already initialized`);
       _viewer = viewer;
-      _dataSource = new Cesium.CustomDataSource('inmet-alerts');
+      _dataSource = new Cesium.CustomDataSource(id);
       _dataSource.show = false;
       viewer.dataSources.add(_dataSource);
       _count = 0;
@@ -154,7 +204,7 @@ export function createInmetAlertsLayer({
     enable() {
       _enabled = true;
       if (_dataSource) _dataSource.show = true;
-      overlayHost?.setVisible?.(INMET_OVERLAY_SOURCE_ID, true);
+      overlayHost?.setVisible?.(OVERLAY_ID, true);
       installClickHandler();
     },
 
@@ -188,7 +238,7 @@ export function createInmetAlertsLayer({
           const entities = [];
           _rowById.clear();
           for (const row of ordered) {
-            const color = Cesium.Color.fromCssColorString(inmetAccent(row));
+            const color = Cesium.Color.fromCssColorString(alertAccent(row));
             for (const [index, rings] of row.polygons.entries()) {
               const outer = ringPositions(rings[0]);
               entities.push(
@@ -214,7 +264,7 @@ export function createInmetAlertsLayer({
             const { polygons, ...facts } = row;
             _rowById.set(row.stableId, {
               ...facts,
-              anchor: inmetAnchorDegrees(polygons),
+              anchor: alertAnchorDegrees(polygons),
             });
           }
           _dataSource.entities.removeAll();
@@ -229,8 +279,8 @@ export function createInmetAlertsLayer({
       } catch (e) {
         if (request.signal.aborted || _request !== request || !_enabled)
           return false;
-        console.warn('[Data:InmetAlerts] Fetch error:', e);
-        _lastError = e?.message || 'INMET indisponível';
+        console.warn(`[Data:${id}] Fetch error:`, e);
+        _lastError = e?.message || 'Fonte indisponível';
         return false;
       } finally {
         if (_request === request) _request = null;
@@ -268,7 +318,8 @@ export function createInmetAlertsLayer({
           id: row.stableId,
           event: row.event,
           severity: row.severityLabel,
-          states: row.states,
+          states: row.states || row.areaDesc,
+          issuer: row.senderName,
           onset: row.onset,
           expires: row.expires,
           lat: row.anchor.lat,
@@ -283,16 +334,11 @@ export function createInmetAlertsLayer({
       return {
         chips: [],
         legend: grades.map((grade, index) => ({
-          label: INMET_SEVERITY[grade].label,
-          color: INMET_SEVERITY[grade].color,
+          label: scale[grade].label,
+          color: scale[grade].color,
           count: [..._rowById.values()].filter((row) => row.severity === grade)
             .length,
-          ...(index === 0
-            ? {
-                blurb:
-                  'Avisos meteorológicos ativos do INMET. Toque numa área para ver o aviso.',
-              }
-            : {}),
+          ...(index === 0 ? { blurb } : {}),
         })),
       };
     },

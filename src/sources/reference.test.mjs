@@ -16,6 +16,7 @@ test('reference factories retain compatibility without starting acquisition or s
     'earthquakes',
     'fire-perimeters',
     'inmet-alerts',
+    'defesa-civil-alerts',
     'cables',
   ]);
   assert.notEqual(first.earthquakes, second.earthquakes);

@@ -216,6 +216,29 @@ const layers = [
     },
   },
   {
+    id: 'defesa-civil-alerts',
+    aliases: [
+      'defesa civil',
+      'civil defense alerts',
+      'brazil civil defense',
+      'alertas da defesa civil',
+      'alertas defesa civil',
+      'idap',
+    ],
+    context: false,
+    query: {
+      fields: {
+        event: ['t'],
+        severity: ['t'],
+        states: ['t'],
+        issuer: ['t'],
+        onset: ['ms'],
+        expires: ['ms'],
+      },
+      timeField: 'onset',
+    },
+  },
+  {
     id: 'weather-cyclones',
     aliases: ['cyclones', 'hurricanes', 'typhoons', 'tropical storms'],
     context: false,

@@ -12,7 +12,7 @@ import {
   buildInmetCard,
   formatBrasiliaTime,
   inmetAnchorDegrees,
-} from '../layers/inmet/cards.js';
+} from '../layers/alerts/cards.js';
 
 const RSS = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"><channel><title>Avisos</title>

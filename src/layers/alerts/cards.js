@@ -1,6 +1,7 @@
-import { INMET_SEVERITY } from '../../data/inmetCap.js';
+import { CAP_SEVERITY } from '../../data/capAlerts.js';
 
 export const INMET_OVERLAY_SOURCE_ID = 'inmet-alerts';
+export const DEFESA_CIVIL_OVERLAY_SOURCE_ID = 'defesa-civil-alerts';
 
 const TIME_FORMAT = new Intl.DateTimeFormat('pt-BR', {
   timeZone: 'America/Sao_Paulo',
@@ -24,13 +25,30 @@ function clip(text, max) {
   return value.length > max ? `${value.slice(0, max - 1).trimEnd()}…` : value;
 }
 
-/** Card colour for a warning: INMET's own ColorRisk, else the grade colour. */
-export function inmetAccent(row) {
-  return row?.color || INMET_SEVERITY[row?.severity]?.color || '#ffd600';
+/** Card colour for a warning: the source's own colour, else the grade colour. */
+export function alertAccent(row) {
+  return row?.color || CAP_SEVERITY[row?.severity]?.color || '#ffd600';
 }
+export const inmetAccent = alertAccent;
 
 /** Detail card for a selected INMET warning (Portuguese, Brasília time). */
 export function buildInmetCard(row, nowMs) {
+  // INMET signs as "Instituto Nacional de Meteorologia"; the acronym reads better.
+  return buildAlertCard({ ...row, senderName: null }, nowMs, {
+    idPrefix: 'inmet-alert-card',
+    source: 'INMET',
+  });
+}
+
+/**
+ * Detail card for any selected CAP warning. `source` is the fallback credit
+ * when the alert names no sender (Defesa Civil alerts name the issuing state).
+ */
+export function buildAlertCard(
+  row,
+  nowMs,
+  { idPrefix = 'alert-card', source = '' } = {},
+) {
   const details = [];
   const start = formatBrasiliaTime(row.onset);
   const end = formatBrasiliaTime(row.expires);
@@ -41,19 +59,24 @@ export function buildInmetCard(row, nowMs) {
     );
   }
   const where = clip(row.states || row.areaDesc, 110);
+  const headline =
+    row.headline && row.headline !== row.description
+      ? clip(row.headline.replace(/^defesa civil\s*:\s*/i, ''), 140)
+      : null;
   if (where) details.push(where);
-  const description = clip(row.description, 170);
+  const description = clip(row.description, 170) || headline;
   if (description) details.push(description);
   const instruction = clip(row.instruction, 90);
   if (instruction) details.push(instruction);
-  details.push('Fonte: INMET');
+  const credit = row.senderName || source;
+  if (credit) details.push(`Fonte: ${credit}`);
   return {
-    id: `inmet-alert-card:${row.stableId}`,
+    id: `${idPrefix}:${row.stableId}`,
     selected: true,
     interactive: false,
     title: `⚠ ${String(row.event || 'Aviso').toUpperCase()} · ${row.severityLabel || 'Aviso'}`,
     details,
-    accent: inmetAccent(row),
+    accent: alertAccent(row),
     priority: Number.MAX_SAFE_INTEGER,
     gapPx: 15,
     verticalOnly: true,
@@ -62,7 +85,7 @@ export function buildInmetCard(row, nowMs) {
 }
 
 /** Vertex mean of the largest outer ring — where the card is anchored. */
-export function inmetAnchorDegrees(polygons) {
+export function alertAnchorDegrees(polygons) {
   let best = null;
   let bestArea = -1;
   for (const rings of polygons) {
@@ -85,3 +108,5 @@ export function inmetAnchorDegrees(polygons) {
   }
   return { lon: lon / count, lat: lat / count };
 }
+
+export const inmetAnchorDegrees = alertAnchorDegrees;
