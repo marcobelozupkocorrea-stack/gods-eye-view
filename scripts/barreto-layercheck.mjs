@@ -27,7 +27,7 @@ const inBrazil = (lat, lon) =>
   lon >= BRAZIL.west &&
   lon <= BRAZIL.east;
 
-export function get(
+function getOnce(
   url,
   { headers = {}, maxBytes = 64 << 20, timeoutMs = 60_000 } = {},
 ) {
@@ -74,6 +74,26 @@ export function get(
     req.on('error', reject);
     req.end();
   });
+}
+
+/**
+ * GET with a short retry for our own server: after a key change the server
+ * rebuilds and swaps releases (~1 s), and a check landing in that gap would
+ * otherwise read as a failure.
+ */
+export async function get(url, options) {
+  const local = new URL(url, BASE).origin === new URL(BASE).origin;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await getOnce(url, options);
+    } catch (err) {
+      const transient = /ECONNREFUSED|ECONNRESET|socket hang up/i.test(
+        `${err?.code} ${err?.message}`,
+      );
+      if (!local || !transient || attempt >= 4) throw err;
+      await new Promise((r) => setTimeout(r, 5_000));
+    }
+  }
 }
 
 const json = (res) => {
