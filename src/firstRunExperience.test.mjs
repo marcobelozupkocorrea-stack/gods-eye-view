@@ -674,11 +674,11 @@ test('the voice TOOL SCHEMA matches the pinned contract — the mission mapping 
   // schema, which may not carry top-level anyOf), and Contacts requested-radius
   // list descriptions; the missions still ride existing tools.
   // Street Level adds toggle enum values and the generated alias hint.
-  // barreto.top fork: the INMET and Defesa Civil alert layers add enum values and aliases.
-  assert.equal(block.length, 30117, 'serialized tool schema length drifted');
+  // barreto.top fork: the INMET, Defesa Civil, DETER and Cemaden layers add enum values and aliases.
+  assert.equal(block.length, 30408, 'serialized tool schema length drifted');
   assert.equal(
     crypto.createHash('sha256').update(block).digest('hex'),
-    'a9ea05e130f0c4c19f05f1395135e29780b74c1ef8becb8e5123994362a01a88',
+    '46d938126d72faa44d1b3bea8b66e87ed0f08811cc63cda8fb70c9a9c91d01c5',
     'the first-run missions must ride EXISTING tools: no schema edit, no cache bust',
   );
   const instructions = fs.readFileSync(new URL('../server/providers/openai/instructions.js', import.meta.url), 'utf8');

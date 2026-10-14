@@ -169,3 +169,16 @@ test('loaders fetch the official endpoints and fail closed', async () => {
   const broken = async () => new Response('<html>not json</html>');
   assert.deepEqual(await loadDerSpSources({ fetchImpl: broken }), []);
 });
+
+test('live stream concurrency follows CCTV_HLS_MAX_SESSIONS within bounds', async () => {
+  const { HLS_LIMITS, hlsLimitsFromEnv } =
+    await import('../../server/providers/cctv/stream.js');
+  assert.equal(hlsLimitsFromEnv({}).sessions, HLS_LIMITS.sessions);
+  assert.equal(hlsLimitsFromEnv({ CCTV_HLS_MAX_SESSIONS: '6' }).sessions, 6);
+  assert.equal(hlsLimitsFromEnv({ CCTV_HLS_MAX_SESSIONS: '99' }).sessions, 16);
+  assert.equal(hlsLimitsFromEnv({ CCTV_HLS_MAX_SESSIONS: '0' }).sessions, 1);
+  assert.equal(
+    hlsLimitsFromEnv({ CCTV_HLS_MAX_SESSIONS: '6' }).segmentBytes,
+    HLS_LIMITS.segmentBytes,
+  );
+});

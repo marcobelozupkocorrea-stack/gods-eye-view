@@ -596,8 +596,20 @@ export const LAYER_STATE_REGISTRY = Object.freeze([
   }),
   Object.freeze({
     // barreto.top fork-specific token (see inmet-alerts).
+    id: 'cemaden-alerts',
+    token: 'ze',
+    disposition: 'enabled-only',
+  }),
+  Object.freeze({
+    // barreto.top fork-specific token (see inmet-alerts).
     id: 'defesa-civil-alerts',
     token: 'zc',
+    disposition: 'enabled-only',
+  }),
+  Object.freeze({
+    // barreto.top fork-specific token (see inmet-alerts).
+    id: 'deter-alerts',
+    token: 'zd',
     disposition: 'enabled-only',
   }),
   Object.freeze({ id: 'directions', token: 'n', disposition: 'enabled-only' }),

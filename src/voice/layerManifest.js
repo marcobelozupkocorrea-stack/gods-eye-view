@@ -239,6 +239,52 @@ const layers = [
     },
   },
   {
+    id: 'deter-alerts',
+    aliases: [
+      'deter',
+      'deforestation',
+      'deforestation alerts',
+      'desmatamento',
+      'alertas de desmatamento',
+      'inpe deter',
+    ],
+    context: false,
+    query: {
+      fields: {
+        kind: ['t'],
+        municipality: ['t'],
+        state: ['t'],
+        biome: ['t'],
+        areaKm2: ['n'],
+        date: ['ms'],
+      },
+      timeField: 'date',
+    },
+  },
+  {
+    id: 'cemaden-alerts',
+    aliases: [
+      'cemaden',
+      'cemaden alerts',
+      'alertas cemaden',
+      'risco hidrológico',
+      'deslizamento',
+      'flood risk brazil',
+    ],
+    context: false,
+    query: {
+      fields: {
+        event: ['t'],
+        level: ['t'],
+        municipality: ['t'],
+        state: ['t'],
+        created: ['ms'],
+        updated: ['ms'],
+      },
+      timeField: 'updated',
+    },
+  },
+  {
     id: 'weather-cyclones',
     aliases: ['cyclones', 'hurricanes', 'typhoons', 'tropical storms'],
     context: false,

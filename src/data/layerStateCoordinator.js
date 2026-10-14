@@ -103,6 +103,7 @@ export class LayerStateCoordinator {
     shareLayerState = null,
     allowLocalState = true,
     shareCreatedAtMs = null,
+    firstVisitLayerIds = [],
   } = {}) {
     if (this._destroyed)
       throw new Error('Layer-state coordinator is destroyed');
@@ -125,6 +126,14 @@ export class LayerStateCoordinator {
       }
       if (stored) {
         selected = stored;
+        this._source = 'local';
+      } else if (firstVisitLayerIds?.length) {
+        // barreto.top: a first visit (nothing saved, no share) opens with the
+        // deployment's chosen layers, restored like saved preferences.
+        selected = normalizeLayerState({
+          ...createDefaultLayerState(),
+          enabledLayerIds: firstVisitLayerIds,
+        });
         this._source = 'local';
       }
     } else {

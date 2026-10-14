@@ -54,13 +54,20 @@ const PANEL_GROUPS = [
   },
   {
     label: 'Events',
-    ids: ['rocket-launches', 'earthquakes', 'local-firms', 'fire-perimeters'],
+    ids: [
+      'rocket-launches',
+      'earthquakes',
+      'local-firms',
+      'deter-alerts',
+      'fire-perimeters',
+    ],
   },
   {
     label: 'Weather',
     ids: [
       'inmet-alerts',
       'defesa-civil-alerts',
+      'cemaden-alerts',
       'wind',
       'weather-radar',
       'weather-satellite',
@@ -89,6 +96,8 @@ const PANEL_LABELS = {
   'local-firms': 'Active Fires',
   'inmet-alerts': 'Alertas INMET (Brasil)',
   'defesa-civil-alerts': 'Alertas Defesa Civil (Brasil)',
+  'deter-alerts': 'Desmatamento DETER (Brasil)',
+  'cemaden-alerts': 'Alertas Cemaden (Brasil)',
 };
 
 function panelLabel(layer) {

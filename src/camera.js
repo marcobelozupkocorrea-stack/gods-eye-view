@@ -80,3 +80,36 @@ export function flyToAustin(viewer) {
     if (!viewer.isDestroyed()) viewer.camera.cancelFlight();
   };
 }
+
+/**
+ * barreto.top: the Portuguese build opens over Brazil — the whole country in
+ * view, so national layers (fires, alerts, cameras) read at a glance.
+ * @returns {Function} Cancels the pending or active startup flight.
+ */
+export function flyToBrazil(viewer) {
+  viewer.camera.setView({
+    destination: Cesium.Cartesian3.fromDegrees(-52.5, -14.5, 20_000_000),
+    orientation: {
+      heading: 0,
+      pitch: Cesium.Math.toRadians(-90),
+      roll: 0.0,
+    },
+  });
+  const timer = setTimeout(() => {
+    if (viewer.isDestroyed()) return;
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(-52.5, -15.5, 5_200_000),
+      orientation: {
+        heading: 0,
+        pitch: Cesium.Math.toRadians(-90),
+        roll: 0.0,
+      },
+      duration: 3.0,
+      easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT,
+    });
+  }, 500);
+  return () => {
+    clearTimeout(timer);
+    if (!viewer.isDestroyed()) viewer.camera.cancelFlight();
+  };
+}

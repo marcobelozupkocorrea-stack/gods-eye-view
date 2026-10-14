@@ -26,6 +26,8 @@ import { weatherProxy } from './weather.js';
 import { firePerimetersProxy } from './firePerimeters.js';
 import { inmetAlertsProxy } from './inmetAlerts.js';
 import { defesaCivilAlertsProxy } from './defesaCivilAlerts.js';
+import { deterAlertsProxy } from './deterAlerts.js';
+import { cemadenAlertsProxy } from './cemadenAlerts.js';
 import { cycloneProxy } from './cyclones.js';
 import { windProxy } from './wind.js';
 
@@ -64,6 +66,8 @@ function localProviderPlugins({ realtime } = {}) {
     firePerimetersProxy(),
     inmetAlertsProxy(),
     defesaCivilAlertsProxy(),
+    deterAlertsProxy(),
+    cemadenAlertsProxy(),
     keySetupEndpoint(),
   ];
 }

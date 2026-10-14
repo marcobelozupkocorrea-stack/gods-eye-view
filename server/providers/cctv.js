@@ -17,7 +17,7 @@ import {
   CCTV_MAX_SOURCES_CEILING,
 } from './cctv/constants.js';
 import { sanitizeCctvRangeHeader } from './cctv/range.js';
-import { createHlsPuller } from './cctv/stream.js';
+import { createHlsPuller, hlsLimitsFromEnv } from './cctv/stream.js';
 import { googleServerApiKey } from './places/google-key.js';
 export { CCTV_FRAME_FETCH_TIMEOUT_MS, fetchCctvImageFromUpstream };
 /**
@@ -42,7 +42,7 @@ export function cctvProxy({ sourceRoot = process.cwd() } = {}) {
    * for any catalog the proxy can actually serve. */
   const HEALTH_MAX_ENTRIES = CCTV_MAX_SOURCES_CEILING;
   /** Live HLS strategies (see ./cctv/stream.js). Shared across dev and preview. */
-  const puller = createHlsPuller();
+  const puller = createHlsPuller({ limits: hlsLimitsFromEnv() });
 
   /** Update the health entry for a camera, evicting the oldest entry if at capacity. */
   const setHealth = (cameraId, patch) => {

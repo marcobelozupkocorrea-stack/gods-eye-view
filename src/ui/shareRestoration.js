@@ -2,6 +2,7 @@ import { LayerStateCoordinator } from '../data/layerStateCoordinator.js';
 import { stampInitialShareGesture } from '../navigationPolicy.js';
 import { canPresentDeferredStatusNotice } from '../loadingFeedback.js';
 import { UiLifetime } from './uiLifetime.js';
+import { firstVisitLayerIds } from './ptBr.js';
 
 /** Own initial share restoration, durable layer state and restoration notices. */
 export class ShareRestoration {
@@ -150,6 +151,7 @@ export class ShareRestoration {
         // Any valid camera/style share isolates recipient-local preferences,
         // including legacy and malformed-v2 layer payloads.
         allowLocalState: !this._initialShareState,
+        firstVisitLayerIds: firstVisitLayerIds(),
       });
       if (this._initialShareSelectionSuperseded) {
         this._layerStateCoordinator.cancelPendingShareTracking(

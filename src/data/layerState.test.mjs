@@ -202,8 +202,8 @@ function encode(state) {
 
 test('production registry is exact, canonical, and rejects incomplete contracts', async () => {
   assert.equal(validateLayerStateRegistry(), true);
-  assert.equal(REGISTERED_LAYER_IDS.length, 31);
-  assert.equal(new Set(REGISTERED_LAYER_IDS).size, 31);
+  assert.equal(REGISTERED_LAYER_IDS.length, 33);
+  assert.equal(new Set(REGISTERED_LAYER_IDS).size, 33);
   assert.ok(REGISTERED_LAYER_IDS.includes('transit'));
   assert.deepEqual(REGISTERED_LAYER_IDS, [...REGISTERED_LAYER_IDS].sort());
   assert.deepEqual(LEGACY_LAYER_STATE_TOKENS, {
@@ -2792,4 +2792,37 @@ test('explicit provider switches reach durable state without adopting unrelated 
   } finally {
     coordinator.destroy();
   }
+});
+
+// barreto.top: first-visit layers (Portuguese build) never override intent.
+test('a first visit opens the deployment layers; saved state and shares still win', async () => {
+  const brazil = ['local-firms', 'inmet-alerts', 'defesa-civil-alerts', 'cctv'];
+  const fresh = productionManager();
+  const first = new LayerStateCoordinator(fresh, shareSink(), {
+    storage: memoryStorage(),
+  });
+  await first.start({ firstVisitLayerIds: brazil });
+  assert.equal(first.source, 'local');
+  assert.deepEqual(
+    [...first.getDurableState().enabledLayerIds].sort(),
+    [...brazil].sort(),
+  );
+  for (const id of brazil) assert.equal(fresh.isEnabled(id), true, id);
+  first.destroy();
+
+  const savedState = createDefaultLayerState();
+  savedState.enabledLayerIds = ['earthquakes'];
+  const saved = new LayerStateCoordinator(productionManager(), shareSink(), {
+    storage: memoryStorage(serializeStoredLayerState(savedState)),
+  });
+  await saved.start({ firstVisitLayerIds: brazil });
+  assert.deepEqual(saved.getDurableState().enabledLayerIds, ['earthquakes']);
+  saved.destroy();
+
+  const shared = new LayerStateCoordinator(productionManager(), shareSink(), {
+    storage: memoryStorage(),
+  });
+  await shared.start({ allowLocalState: false, firstVisitLayerIds: brazil });
+  assert.deepEqual(shared.getDurableState().enabledLayerIds, []);
+  shared.destroy();
 });

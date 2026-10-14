@@ -2224,7 +2224,12 @@
       "src/layers/alerts/cards.js",
       "src/data/inmetCap.js",
       "src/data/capAlerts.js",
-      "src/ui/ptBr.js"
+      "src/ui/ptBr.js",
+      "src/layers/points/source.js",
+      "src/data/cemaden.js",
+      "src/data/deter.js",
+      "src/layers/points/cards.js",
+      "src/layers/points/index.js"
     ],
     "external": [
       "hls.js",
@@ -2757,7 +2762,12 @@
       "src/layers/alerts/source.js",
       "src/layers/alerts/cards.js",
       "src/data/inmetCap.js",
-      "src/data/capAlerts.js"
+      "src/data/capAlerts.js",
+      "src/data/cemaden.js",
+      "src/layers/points/source.js",
+      "src/data/deter.js",
+      "src/layers/points/cards.js",
+      "src/layers/points/index.js"
     ],
     "external": [
       "hls.js",
@@ -2859,7 +2869,8 @@
       "src/loadingFeedback.js",
       "src/navigationPolicy.js",
       "src/ui/shareRestoration.js",
-      "src/ui/uiLifetime.js"
+      "src/ui/uiLifetime.js",
+      "src/ui/ptBr.js"
     ],
     "external": []
   },
@@ -3135,7 +3146,8 @@
       "src/layers/perimeters/source.js",
       "src/layers/perimeters/records.js",
       "src/layers/submarineCables/bundledSource.js",
-      "src/layers/alerts/source.js"
+      "src/layers/alerts/source.js",
+      "src/layers/points/source.js"
     ],
     "external": []
   },

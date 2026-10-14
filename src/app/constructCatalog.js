@@ -26,7 +26,9 @@ import { createApplicationFirms } from './layers/firms.js';
 import { createApplicationEarthquakes } from './layers/earthquakes.js';
 import { createApplicationFirePerimeters } from './layers/perimeters.js';
 import {
+  createApplicationCemadenAlerts,
   createApplicationDefesaCivilAlerts,
+  createApplicationDeterAlerts,
   createApplicationInmetAlerts,
 } from './layers/inmet.js';
 import { createApplicationCables } from './layers/submarineCables.js';
@@ -129,6 +131,12 @@ export function createApplicationCatalog({
         }),
         createApplicationDefesaCivilAlerts({
           source: sources['defesa-civil-alerts'],
+        }),
+        createApplicationDeterAlerts({
+          source: sources['deter-alerts'],
+        }),
+        createApplicationCemadenAlerts({
+          source: sources['cemaden-alerts'],
         }),
         createApplicationAlpr({ surface, source: sources.alpr }),
         createApplicationStreetLevel({

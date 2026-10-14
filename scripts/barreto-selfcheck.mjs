@@ -5,9 +5,13 @@
  * Run on the server after a deploy: `node scripts/barreto-selfcheck.mjs`.
  * Exits non-zero when any source fails, so the result is visible in logs.
  */
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { inmetAlertsProxy } from '../server/providers/inmetAlerts.js';
 import { defesaCivilAlertsProxy } from '../server/providers/defesaCivilAlerts.js';
 import { firmsProxy } from '../server/providers/firms.js';
+import { deterAlertsProxy } from '../server/providers/deterAlerts.js';
+import { cemadenAlertsProxy } from '../server/providers/cemadenAlerts.js';
 import {
   loadCetSpSources,
   loadDerSpSources,
@@ -67,6 +71,20 @@ const checks = [
       const states = new Set(rows.map((r) => r.senderName).filter(Boolean));
       return `${rows.length} alertas ativos de ${states.size} emissores`;
     },
+  ],
+  [
+    'Desmatamento (DETER/INPE)',
+    mount(deterAlertsProxy()),
+    (j) => {
+      const rows = j?.rows || [];
+      const biomes = new Set(rows.map((r) => r.biome));
+      return `${rows.length} alertas em 30 dias (${[...biomes].join(' + ')})`;
+    },
+  ],
+  [
+    'Alertas Cemaden',
+    mount(cemadenAlertsProxy()),
+    (j) => `${(j?.rows || []).length} alertas ativos`,
   ],
   [
     'Queimadas (FIRMS + INPE)',
@@ -141,4 +159,12 @@ for (const [name, call, summarize] of checks) {
     console.log(`[selfcheck] FALHA ${name}: ${err?.message || err}`);
   }
 }
+const total = cameraChecks.length + checks.length;
+const release = path.basename(
+  path.dirname(path.dirname(fileURLToPath(import.meta.url))),
+);
+console.log(
+  `[selfcheck] RESUMO ${new Date().toISOString()} versão ${release}: ` +
+    (failed ? `${failed} de ${total} FALHARAM` : `tudo OK (${total}/${total})`),
+);
 process.exitCode = failed ? 1 : 0;

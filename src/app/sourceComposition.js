@@ -48,6 +48,8 @@ export const CATALOG_SOURCE_CONTRACTS = Object.freeze({
   'fire-perimeters': contract(['fire-perimeters'], ['getSnapshot']),
   'inmet-alerts': contract(['inmet-alerts'], ['getSnapshot']),
   'defesa-civil-alerts': contract(['defesa-civil-alerts'], ['getSnapshot']),
+  'deter-alerts': contract(['deter-alerts'], ['getSnapshot']),
+  'cemaden-alerts': contract(['cemaden-alerts'], ['getSnapshot']),
   cables: contract(['telegeography-submarine-cables'], ['fetch']),
   transit: contract(['transit'], ['requestSnapshot', 'getHistory']),
 });

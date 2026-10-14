@@ -14,6 +14,19 @@ export const HLS_LIMITS = Object.freeze({
   readyMs: 12000,
 });
 
+/**
+ * barreto.top: concurrent live streams are an operator choice
+ * (CCTV_HLS_MAX_SESSIONS, 1..16); every other bound stays as shipped.
+ */
+export function hlsLimitsFromEnv(env = process.env) {
+  const raw = Number.parseInt(String(env.CCTV_HLS_MAX_SESSIONS ?? ''), 10);
+  if (!Number.isFinite(raw)) return HLS_LIMITS;
+  return Object.freeze({
+    ...HLS_LIMITS,
+    sessions: Math.min(16, Math.max(1, raw)),
+  });
+}
+
 /** Refuse redirects; count actual streamed bytes, including chunked responses. */
 export async function fetchHlsBytes(
   url,

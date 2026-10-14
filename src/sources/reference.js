@@ -4,6 +4,10 @@ import {
   createDefesaCivilAlertSource,
   createInmetAlertSource,
 } from '../layers/alerts/source.js';
+import {
+  createCemadenSource,
+  createDeterSource,
+} from '../layers/points/source.js';
 import { createBundledCableSource } from '../layers/submarineCables/bundledSource.js';
 
 /** Construct the existing reference feeds independently of application setup. */
@@ -13,6 +17,8 @@ export function createReferenceSources() {
     'fire-perimeters': createWfigsPerimeterSource(),
     'inmet-alerts': createInmetAlertSource(),
     'defesa-civil-alerts': createDefesaCivilAlertSource(),
+    'deter-alerts': createDeterSource(),
+    'cemaden-alerts': createCemadenSource(),
     cables: createBundledCableSource(),
   };
 }

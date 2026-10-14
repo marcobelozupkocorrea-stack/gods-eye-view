@@ -3,6 +3,10 @@ import {
   createDefesaCivilAlertsLayer,
   createInmetAlertsLayer,
 } from '../../layers/alerts/index.js';
+import {
+  createCemadenLayer,
+  createDeterLayer,
+} from '../../layers/points/index.js';
 import * as picking from '../../data/pickRegistry.js';
 import * as overlays from '../../overlays/worldOverlay.js';
 import { isPointerFree } from '../../data/inputOwnership.js';
@@ -28,4 +32,14 @@ export function createApplicationInmetAlerts(options) {
 /** Wire Defesa Civil (IDAP) alerts (Brazil) into the application catalog. */
 export function createApplicationDefesaCivilAlerts(options) {
   return createDefesaCivilAlertsLayer({ ...appServices(), ...options });
+}
+
+/** Wire INPE DETER deforestation alerts (Brazil) into the application catalog. */
+export function createApplicationDeterAlerts(options) {
+  return createDeterLayer({ ...appServices(), ...options });
+}
+
+/** Wire Cemaden municipal risk alerts (Brazil) into the application catalog. */
+export function createApplicationCemadenAlerts(options) {
+  return createCemadenLayer({ ...appServices(), ...options });
 }

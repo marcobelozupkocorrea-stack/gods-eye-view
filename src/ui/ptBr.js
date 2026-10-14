@@ -40,6 +40,8 @@ const LAYERS = Object.freeze({
   'fire-perimeters': 'Perímetros de incêndio (EUA)',
   'inmet-alerts': 'Alertas INMET',
   'defesa-civil-alerts': 'Alertas Defesa Civil',
+  'deter-alerts': 'Desmatamento (DETER)',
+  'cemaden-alerts': 'Alertas Cemaden',
   wind: 'Vento',
   'weather-radar': 'Radar de chuva (EUA)',
   'weather-satellite': 'Nuvens por satélite',
@@ -85,4 +87,21 @@ export function layerLabel(id, doc) {
 /** Toggle / status word (ON, LOADING…) in the page language. */
 export function stateLabel(word, doc) {
   return isPortugueseUi(doc) ? STATES[word] || word : word;
+}
+
+/**
+ * Layers a first visit opens with in the Portuguese build (no share link, no
+ * saved preferences). Saved choices and share links always win.
+ */
+export const BRAZIL_FIRST_VISIT_LAYER_IDS = Object.freeze([
+  'local-firms',
+  'inmet-alerts',
+  'defesa-civil-alerts',
+  'cemaden-alerts',
+  'cctv',
+]);
+
+/** First-visit layers for the page language ([] keeps upstream behaviour). */
+export function firstVisitLayerIds(doc) {
+  return isPortugueseUi(doc) ? [...BRAZIL_FIRST_VISIT_LAYER_IDS] : [];
 }
