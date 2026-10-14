@@ -36,6 +36,8 @@ export const DIRECTIONS_MODES = Object.freeze({
   bike: Object.freeze({ chip: 'BIKE', word: 'Bike', icon: '🚲' }),
 });
 export const DEFAULT_DIRECTIONS_MODE = 'car';
+/** barreto.top: intermediate stops allowed between A and B. */
+export const MAX_STOPS = 10;
 
 /**
  * barreto.top: Portuguese copy, chosen per call from the page language so the
@@ -66,6 +68,14 @@ export function trafficColor(magnitude, category) {
   if (category === 'ROAD_CLOSURE') return DIRECTIONS_TRAFFIC_COLORS[4];
   return DIRECTIONS_TRAFFIC_COLORS[Math.min(4, Math.max(1, magnitude || 2))];
 }
+
+export const INCIDENT_SYMBOLS = Object.freeze({
+  accident: Object.freeze({ glyph: '💥', color: '#ff3b30' }),
+  roadwork: Object.freeze({ glyph: '🚧', color: '#ff9500' }),
+  closure: Object.freeze({ glyph: '⛔', color: '#8b0000' }),
+  weather: Object.freeze({ glyph: '🌧', color: '#0a84ff' }),
+  hazard: Object.freeze({ glyph: '⚠', color: '#ffcc00' }),
+});
 
 /** "17:45" from an ISO time with offset, in the page's local clock. */
 export function clockTime(iso) {
@@ -135,7 +145,10 @@ export function normalizeDirectionsParams(params = {}) {
     out.mode = mode;
   }
   if (params.arm !== undefined) {
-    out.arm = params.arm === 'a' || params.arm === 'b' ? params.arm : null;
+    out.arm =
+      params.arm === 'a' || params.arm === 'b' || params.arm === 'stop'
+        ? params.arm
+        : null;
   }
   if (params.swap === true) out.swap = true;
   if (params.avoidTolls !== undefined)
@@ -144,6 +157,33 @@ export function normalizeDirectionsParams(params = {}) {
     out.route =
       Number.isInteger(params.route) && params.route >= 0 ? params.route : null;
   if (params.here === true) out.here = true;
+  // barreto.top: whole itineraries (search, favourites): A, stops…, B.
+  if (Array.isArray(params.points)) {
+    const points = params.points
+      .map((p) => ({
+        lat: Number(p?.lat),
+        lon: Number(p?.lon),
+        label: typeof p?.label === 'string' ? p.label.slice(0, 80) : '',
+      }))
+      .filter(
+        (p) =>
+          Number.isFinite(p.lat) &&
+          Number.isFinite(p.lon) &&
+          Math.abs(p.lat) <= 90 &&
+          Math.abs(p.lon) <= 180,
+      );
+    if (points.length >= 1 && points.length <= MAX_STOPS + 2)
+      out.points = points;
+  }
+  if (params.depart !== undefined)
+    out.depart =
+      typeof params.depart === 'string' &&
+      Number.isFinite(Date.parse(params.depart))
+        ? params.depart
+        : null;
+  if (Number.isInteger(params.removeStop) && params.removeStop >= 0)
+    out.removeStop = params.removeStop;
+  if (params.clearStops === true) out.clearStops = true;
   if (params.refresh === true) out.refresh = true;
   if (params.fly === true) out.fly = true;
   if (params.clear === true) out.clear = true;
@@ -236,6 +276,33 @@ export function directionsRowControls(state) {
         : 'Then click the globe to place the destination',
     params: { arm: armed === 'b' ? null : 'b' },
   });
+  const stops = Array.isArray(state.stops) ? state.stops : [];
+  if (pt && a && b) {
+    chips.push({
+      id: 'add-stop',
+      label:
+        armed === 'stop'
+          ? 'TOQUE NO MAPA'
+          : `+ PARADA${stops.length ? ` (${stops.length})` : ''}`,
+      active: armed === 'stop',
+      state: armed === 'stop' ? 'active' : 'idle',
+      disabled: stops.length >= MAX_STOPS || routing,
+      title:
+        stops.length >= MAX_STOPS
+          ? `No máximo ${MAX_STOPS} paradas`
+          : 'Toque no mapa para incluir uma parada no caminho',
+      params: { arm: armed === 'stop' ? null : 'stop' },
+    });
+    if (stops.length)
+      chips.push({
+        id: 'clear-stops',
+        label: 'TIRAR PARADAS',
+        state: 'idle',
+        disabled: routing,
+        title: 'Remover todas as paradas intermediárias',
+        params: { clearStops: true },
+      });
+  }
   chips.push({
     id: 'swap',
     label: '⇄',
@@ -572,7 +639,25 @@ export function directionsStats(state) {
             : ` (+${formatRouteDuration(delay)} traffic)`
           : ''),
     ];
+    if (state.depart && route.traffic?.departure)
+      parts.push(
+        pt
+          ? `saída ${clockTime(route.traffic.departure)}`
+          : `leave ${clockTime(route.traffic.departure)}`,
+      );
     if (arrival) parts.push(pt ? `chega ${arrival}` : `arrive ${arrival}`);
+    if (Array.isArray(state.stops) && state.stops.length)
+      parts.push(
+        pt
+          ? `${state.stops.length} parada${state.stops.length > 1 ? 's' : ''}`
+          : `${state.stops.length} stop(s)`,
+      );
+    if (route.incidents?.length)
+      parts.push(
+        pt
+          ? `${route.incidents.length} ocorrência${route.incidents.length > 1 ? 's' : ''}`
+          : `${route.incidents.length} incident(s)`,
+      );
     parts.push(word);
     if (route.stepsTruncated)
       parts.push(
@@ -595,7 +680,7 @@ export function directionsStats(state) {
   let coverage;
   if (pt) {
     if (armed)
-      coverage = `Toque no mapa para marcar ${armed === 'a' ? 'a origem' : 'o destino'}`;
+      coverage = `Toque no mapa para marcar ${armed === 'a' ? 'a origem' : armed === 'stop' ? 'a parada' : 'o destino'}`;
     else if (a && !b) coverage = 'Agora toque em DESTINO e depois no mapa';
     else if (!a && b) coverage = 'Toque em ORIGEM (ou DAQUI) e depois no mapa';
     else coverage = 'Toque em ORIGEM (ou DAQUI) e depois no mapa';
@@ -752,6 +837,22 @@ export function normalizeRoutePayload(payload, mode) {
         category: typeof c.category === 'string' ? c.category : 'OTHER',
         delayS: Math.max(0, Number(c.delayS) || 0),
       }));
+    out.incidents = (Array.isArray(payload.incidents) ? payload.incidents : [])
+      .filter(
+        (i) =>
+          Number.isFinite(i?.lat) &&
+          Number.isFinite(i?.lon) &&
+          INCIDENT_SYMBOLS[i.kind],
+      )
+      .slice(0, 50)
+      .map((i) => ({
+        lat: i.lat,
+        lon: i.lon,
+        kind: i.kind,
+        label: typeof i.label === 'string' ? i.label : 'Ocorrência',
+        delayS: Math.max(0, Number(i.delayS) || 0),
+        pointIndex: Number.isInteger(i.pointIndex) ? i.pointIndex : null,
+      }));
   }
   if (Array.isArray(payload.alternatives) && payload.alternatives.length)
     out.alternatives = payload.alternatives
@@ -815,6 +916,11 @@ export function createDirectionsLayer({ services, source }) {
   let _routes = [];
   let _routeIndex = 0;
   let _avoidTolls = false;
+  /** @type {{lat:number, lon:number, label?:string}[]} stops between A and B */
+  let _stops = [];
+  let _stopMarkers = [];
+  /** Planned departure (ISO with offset) or null for "now". */
+  let _depart = null;
   let _locating = false;
   let _refreshTimer = null;
   let _stepPoints = null;
@@ -866,6 +972,8 @@ export function createDirectionsLayer({ services, source }) {
       flightStep: _flightStep,
       pointerBlocked: _pointerBlocked,
       avoidTolls: _avoidTolls,
+      stops: _stops,
+      depart: _depart,
       routes: _routes,
       routeIndex: _routeIndex,
       locating: _locating,
@@ -949,6 +1057,63 @@ export function createDirectionsLayer({ services, source }) {
     }
   }
 
+  function redrawStopMarkers() {
+    for (const marker of _stopMarkers) removeEntity(marker);
+    _stopMarkers = [];
+    if (!_viewer) return;
+    _stops.forEach((stop, index) => {
+      _stopMarkers.push(
+        _viewer.entities.add({
+          id: `directions:marker:stop:${index}`,
+          position: Cesium.Cartesian3.fromDegrees(stop.lon, stop.lat, 0),
+          point: {
+            pixelSize: 12,
+            color: Cesium.Color.fromCssColorString('#ffd60a'),
+            outlineColor: Cesium.Color.BLACK,
+            outlineWidth: 2,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          },
+          label: {
+            text: String(index + 1),
+            font: 'bold 12px "JetBrains Mono", "SF Mono", monospace',
+            fillColor: Cesium.Color.WHITE,
+            outlineColor: Cesium.Color.BLACK,
+            outlineWidth: 3,
+            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+            pixelOffset: new Cesium.Cartesian2(0, -18),
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          },
+        }),
+      );
+    });
+  }
+
+  /** barreto.top: tell the page (route planner, "no caminho") what changed. */
+  function announceRoute() {
+    try {
+      globalThis.dispatchEvent?.(
+        new CustomEvent('barreto:route-changed', {
+          detail: {
+            route: _route,
+            mode: _mode,
+            depart: _depart,
+            points: _a && _b ? [_a, ..._stops, _b] : [],
+            a: _a,
+            b: _b,
+            stops: _stops,
+            status: _status,
+            routes: _routes,
+            routeIndex: _routeIndex,
+          },
+        }),
+      );
+    } catch {
+      /* no DOM events here */
+    }
+  }
+
   function clearRouteGraphics() {
     services.credits?.hideOsmCredit?.(_viewer, 'directions');
     _clearStepSelection();
@@ -982,6 +1147,33 @@ export function createDirectionsLayer({ services, source }) {
         }),
       );
     });
+    for (const [n, incident] of (route.incidents || []).entries()) {
+      const symbol = INCIDENT_SYMBOLS[incident.kind];
+      _extraEntities.push(
+        _viewer.entities.add({
+          id: `directions:incident:${n}`,
+          name: incident.label,
+          position: Cesium.Cartesian3.fromDegrees(
+            incident.lon,
+            incident.lat,
+            0,
+          ),
+          label: {
+            text: symbol.glyph,
+            font: '20px sans-serif',
+            showBackground: true,
+            backgroundColor: Cesium.Color.fromCssColorString(
+              symbol.color,
+            ).withAlpha(0.85),
+            backgroundPadding: new Cesium.Cartesian2(6, 4),
+            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+            pixelOffset: new Cesium.Cartesian2(0, -6),
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          },
+        }),
+      );
+    }
     for (const [n, slow] of (route.congestion || []).entries()) {
       const coords = route.geometry.slice(slow.from, slow.to + 1);
       if (coords.length < 2) continue;
@@ -1032,6 +1224,7 @@ export function createDirectionsLayer({ services, source }) {
     _routeIndex = index;
     _route = option;
     drawRoute(option);
+    announceRoute();
     return true;
   }
 
@@ -1202,6 +1395,8 @@ export function createDirectionsLayer({ services, source }) {
           b: _b,
           lang: isPortugueseDirections() ? 'pt' : undefined,
           avoidTolls: _avoidTolls,
+          stops: _stops,
+          depart: _depart,
         },
         {
           signal: controller.signal,
@@ -1266,7 +1461,10 @@ export function createDirectionsLayer({ services, source }) {
       clearTimeout(timer);
       if (_routeAbort === controller) _routeAbort = null;
       syncTrafficRefresh();
-      if (seq === _routeSeq) notifyRow();
+      if (seq === _routeSeq) {
+        notifyRow();
+        announceRoute();
+      }
       services.render.governorRequestRender('directions-route');
     }
   }
@@ -1321,15 +1519,21 @@ export function createDirectionsLayer({ services, source }) {
    * @returns {boolean} Whether the endpoint was placed.
    */
   function placeDirectionsEndpoint(which, point) {
-    if (which !== 'a' && which !== 'b') return false;
+    if (which !== 'a' && which !== 'b' && which !== 'stop') return false;
     if (!Number.isFinite(point?.lat) || !Number.isFinite(point?.lon))
       return false;
     // The claim is held until this click has finished being dispatched, so the
     // ambient handlers that run after this one still see the pointer as taken.
     disarm({ afterDispatch: true });
-    if (which === 'a') _a = point;
-    else _b = point;
-    placeMarker(which, point);
+    if (which === 'stop') {
+      if (_stops.length >= MAX_STOPS) return false;
+      _stops = [..._stops, point];
+      redrawStopMarkers();
+    } else {
+      if (which === 'a') _a = point;
+      else _b = point;
+      placeMarker(which, point);
+    }
     if (_a && _b) void requestRoute();
     else notifyRow();
     services.render.governorRequestRender('directions-place');
@@ -1392,6 +1596,8 @@ export function createDirectionsLayer({ services, source }) {
     _route = null;
     _routes = [];
     _routeIndex = 0;
+    _stops = [];
+    redrawStopMarkers();
     stopTrafficRefresh();
     _status = 'idle';
     _error = null;
@@ -1400,6 +1606,7 @@ export function createDirectionsLayer({ services, source }) {
     _markerA = null;
     _markerB = null;
     clearRouteGraphics();
+    announceRoute();
     services.render.governorRequestRender('directions-clear');
   }
 
@@ -1741,9 +1948,43 @@ export function createDirectionsLayer({ services, source }) {
       if (patch.route !== undefined && patch.route !== null)
         selectRouteOption(patch.route);
       if (patch.here) useCurrentLocation();
+      let reroute = false;
+      if (patch.points) {
+        const pts = patch.points;
+        disarm();
+        _a = pts[0];
+        placeMarker('a', _a);
+        if (pts.length >= 2) {
+          _b = pts[pts.length - 1];
+          placeMarker('b', _b);
+          _stops = pts.slice(1, -1);
+        } else _stops = [];
+        redrawStopMarkers();
+        reroute = true;
+      }
+      if (patch.depart !== undefined && patch.depart !== _depart) {
+        _depart = patch.depart;
+        reroute = true;
+      }
+      if (patch.removeStop !== undefined && _stops[patch.removeStop]) {
+        _stops = _stops.filter((_, i) => i !== patch.removeStop);
+        redrawStopMarkers();
+        reroute = true;
+      }
+      if (patch.clearStops && _stops.length) {
+        _stops = [];
+        redrawStopMarkers();
+        reroute = true;
+      }
+      if (reroute) {
+        if (_a && _b && _enabled) void requestRoute();
+        else announceRoute();
+      }
       if (patch.refresh && _a && _b && _enabled) void requestRoute();
       if (patch.swap && _a && _b) {
         [_a, _b] = [_b, _a];
+        _stops = [..._stops].reverse();
+        redrawStopMarkers();
         placeMarker('a', _a);
         placeMarker('b', _b);
         if (_enabled) void requestRoute();

@@ -165,8 +165,16 @@ export function firmsProxy() {
     return entry;
   }
 
-  function buildPayload(entry, stale) {
-    const fires = filterTrailing24h(entry.fires, Date.now());
+  function buildPayload(entry, stale, bbox = null) {
+    let fires = filterTrailing24h(entry.fires, Date.now());
+    // barreto.top: `?bbox=w,s,e,n` keeps only that area (South America for
+    // the Brazilian build) — a fraction of the ~25 MB world payload.
+    if (bbox) {
+      const [w, s, e, n] = bbox;
+      fires = fires.filter(
+        (f) => f.lon >= w && f.lon <= e && f.lat >= s && f.lat <= n,
+      );
+    }
     return {
       fetchedAt: entry.at,
       stale,
@@ -224,6 +232,35 @@ export function firmsProxy() {
         });
         res.end(JSON.stringify(obj));
       };
+      const query = new URL(req.url || '/', 'http://localhost').searchParams;
+      const bboxParts = (query.get('bbox') || '').split(',').map(Number);
+      const bbox =
+        bboxParts.length === 4 &&
+        bboxParts.every(Number.isFinite) &&
+        bboxParts[0] < bboxParts[2] &&
+        bboxParts[1] < bboxParts[3]
+          ? bboxParts
+          : null;
+      // barreto.top: the snapshot only changes every 30 min, so a poll that
+      // already has it gets a 304 instead of the whole list again.
+      const sendSnapshot = (entry, stale) => {
+        if (res.headersSent) return;
+        const etag = `"firms-${entry.at}-${stale ? 's' : 'f'}-${bbox ? bbox.join('_') : 'world'}"`;
+        if (req.headers?.['if-none-match'] === etag) {
+          res.writeHead(304, {
+            ETag: etag,
+            'Cache-Control': 'private, no-cache',
+          });
+          res.end();
+          return;
+        }
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'private, no-cache',
+          ETag: etag,
+        });
+        res.end(JSON.stringify(buildPayload(entry, stale, bbox)));
+      };
       try {
         const subPath = String(req.url || '').split('?')[0];
         const key = mapKey();
@@ -260,7 +297,7 @@ export function firmsProxy() {
 
         const entry = mem;
         if (entry && Date.now() - entry.at < TTL_MS) {
-          sendJson(200, buildPayload(entry, false));
+          sendSnapshot(entry, false);
           return;
         }
         // Stale or missing → refresh, single-flight (concurrent requests
@@ -286,9 +323,9 @@ export function firmsProxy() {
         const pending = inflight;
         const fresh = await pending;
         if (fresh) {
-          sendJson(200, buildPayload(fresh, false));
+          sendSnapshot(fresh, false);
         } else if (entry) {
-          sendJson(200, buildPayload(entry, true)); // upstream down — stale beats empty
+          sendSnapshot(entry, true); // upstream down — stale beats empty
         } else {
           sendJson(502, {
             error: 'firms fetch failed and no cache available',

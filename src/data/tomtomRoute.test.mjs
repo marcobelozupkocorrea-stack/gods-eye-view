@@ -37,6 +37,24 @@ const route = (minutes, delay) => ({
       startPointIndex: 3,
       endPointIndex: 9,
     },
+    {
+      sectionType: 'TRAFFIC',
+      simpleCategory: 'ROAD_WORK',
+      magnitudeOfDelay: 4,
+      delayInSeconds: 0,
+      startPointIndex: 12,
+      endPointIndex: 14,
+      tec: { causes: [{ mainCauseCode: 3 }] },
+    },
+    {
+      sectionType: 'TRAFFIC',
+      simpleCategory: 'JAM',
+      magnitudeOfDelay: 3,
+      delayInSeconds: 300,
+      startPointIndex: 15,
+      endPointIndex: 18,
+      tec: { causes: [{ mainCauseCode: 1 }, { mainCauseCode: 2 }] },
+    },
     { sectionType: 'TRAFFIC', startPointIndex: 20, endPointIndex: 99 },
   ],
   guidance: {
@@ -81,9 +99,23 @@ test('TomTom routes become the /api/route payload with traffic', () => {
   assert.equal(out.steps[1].ref, 'SP-160');
   assert.equal(out.steps[0].distanceM, 67);
   assert.equal(out.steps[2].instruction, 'Chegada ao destino');
-  assert.deepEqual(out.congestion, [
-    { from: 3, to: 9, category: 'JAM', magnitude: 2, delayS: 90, speedKmh: 8 },
-  ]);
+  assert.deepEqual(out.congestion[0], {
+    from: 3,
+    to: 9,
+    causes: [],
+    category: 'JAM',
+    magnitude: 2,
+    delayS: 90,
+    speedKmh: 8,
+  });
+  assert.equal(out.congestion.length, 3);
+  assert.deepEqual(
+    out.incidents.map((i) => [i.kind, i.label, i.pointIndex]),
+    [
+      ['roadwork', 'Obras', 12],
+      ['accident', 'Acidente', 15],
+    ],
+  );
   assert.equal(out.alternatives.length, 1);
   assert.equal(out.alternatives[0].durationS, 109 * 60);
   assert.equal(projectTomTomRoutes({ routes: [] }), null);
@@ -101,8 +133,14 @@ test('request URL carries traffic, Portuguese and tolls', () => {
       [-46.63, -23.55],
       [-46.33, -23.96],
     ],
-    { key: 'k', lang: 'pt-BR', avoidTolls: true },
+    {
+      key: 'k',
+      lang: 'pt-BR',
+      avoidTolls: true,
+      depart: '2026-10-14T18:00:00-03:00',
+    },
   );
+  assert.match(url, /departAt=2026-10-14T18%3A00%3A00-03%3A00/);
   assert.match(
     url,
     /calculateRoute\/-23\.550000,-46\.630000:-23\.960000,-46\.330000\/json/,

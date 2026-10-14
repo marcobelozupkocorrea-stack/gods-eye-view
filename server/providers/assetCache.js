@@ -8,6 +8,15 @@
  */
 export const IMMUTABLE_CACHE = 'public, max-age=31536000, immutable';
 
+/** Unhashed but versioned-with-the-app files: Cesium's runtime, icons. */
+export const STATIC_CACHE =
+  'public, max-age=604800, stale-while-revalidate=86400';
+
+export function isStaticLibraryPath(url) {
+  const path = String(url || '').split('?')[0];
+  return /^\/(?:cesium|icons)\/[^?#]+\.[a-z0-9]+$/i.test(path);
+}
+
 export function isHashedAssetPath(url) {
   const path = String(url || '').split('?')[0];
   return /^\/assets\/[^/]+-[A-Za-z0-9_-]{8,}\.[a-z0-9]+$/i.test(path);
@@ -16,9 +25,10 @@ export function isHashedAssetPath(url) {
 export function assetCacheHeaders() {
   const install = (server) => {
     server.middlewares.use((req, res, next) => {
+      const hashed = isHashedAssetPath(req.url);
       if (
         (req.method === 'GET' || req.method === 'HEAD') &&
-        isHashedAssetPath(req.url)
+        (hashed || isStaticLibraryPath(req.url))
       ) {
         const writeHead = res.writeHead;
         res.writeHead = function patchedWriteHead(status, ...rest) {
@@ -38,7 +48,10 @@ export function assetCacheHeaders() {
           if ((status === 200 || status === 304) && !/text\/html/i.test(type)) {
             for (const key of Object.keys(headers))
               if (key.toLowerCase() === 'cache-control') delete headers[key];
-            res.setHeader('Cache-Control', IMMUTABLE_CACHE);
+            res.setHeader(
+              'Cache-Control',
+              hashed ? IMMUTABLE_CACHE : STATIC_CACHE,
+            );
           }
           return writeHead.call(this, status, ...rest);
         };

@@ -96,7 +96,10 @@ export function defesaCivilAlertsProxy({
         if (res.headersSent) return;
         res.writeHead(status, {
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-store',
+          // barreto.top: the layer and the BRASIL AGORA panel read the same
+          // feed moments apart; one minute of browser reuse saves the second
+          // download.
+          'Cache-Control': status === 200 ? 'private, max-age=60' : 'no-store',
         });
         res.end(JSON.stringify(body));
       };

@@ -308,13 +308,29 @@ export class IntelHUD {
     if (!this._geoidReady) {
       if (!this._geoidRequested) {
         this._geoidRequested = true;
-        ensureGeoidReady()
-          .then(() => {
-            this._geoidReady = true;
-          })
-          .catch(() => {
-            /* readout falls back to the uncorrected height */
-          });
+        // The 1.9 MB geoid grid only refines the altitude readout; fetch it
+        // once the first view has loaded instead of competing with it.
+        const load = () =>
+          ensureGeoidReady()
+            .then(() => {
+              this._geoidReady = true;
+            })
+            .catch(() => {
+              /* readout falls back to the uncorrected height */
+            });
+        // barreto.top (pt-BR): its HUD hides the altitude line anyway.
+        const deferred = /^pt\b/i.test(
+          globalThis.document?.documentElement?.lang || '',
+        );
+        if (!deferred) load();
+        else
+          setTimeout(
+            () =>
+              typeof globalThis.requestIdleCallback === 'function'
+                ? globalThis.requestIdleCallback(load, { timeout: 10_000 })
+                : load(),
+            15_000,
+          );
       }
       return null;
     }

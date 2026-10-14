@@ -307,12 +307,24 @@ export function installRouteMiddleware(
       const coords = clean.join(';');
       const lang = url.searchParams.get('lang') === 'pt' ? 'pt' : 'en';
       const avoidTolls = url.searchParams.get('avoid') === 'tolls';
+      // Planned departure ("se eu sair às 18h"): an ISO time with offset, from
+      // now up to 7 days ahead; TomTom predicts traffic for it.
+      const departRaw = url.searchParams.get('depart') || '';
+      const departMs = Date.parse(departRaw);
+      const depart =
+        /^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d)?(?:Z|[+-]\d\d:\d\d)$/.test(
+          departRaw,
+        ) &&
+        departMs > Date.now() + 60_000 &&
+        departMs < Date.now() + 7 * 86_400_000
+          ? departRaw
+          : null;
       if (
         profile === 'car' &&
         _tomtomBudget &&
         url.searchParams.get('provider') !== 'osm'
       ) {
-        const key = `${coords}|${lang}|${avoidTolls ? 't' : ''}`;
+        const key = `${coords}|${lang}|${avoidTolls ? 't' : ''}|${depart || ''}`;
         const hit = _trafficCache.get(key);
         let traffic =
           hit && Date.now() - hit.at <= TRAFFIC_ROUTE_CACHE_MS
@@ -325,6 +337,7 @@ export function installRouteMiddleware(
               key: tomtomKey,
               lang: lang === 'pt' ? 'pt-BR' : 'en-GB',
               avoidTolls,
+              depart,
               budget: _tomtomBudget,
               fetchImpl,
             }).finally(() => _trafficInflight.delete(key));

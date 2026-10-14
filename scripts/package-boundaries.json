@@ -682,7 +682,8 @@
       "src/layers/localAdsb/feedNames.js",
       "src/ui/localSdrPresentation.js",
       "src/data/cameraArrival.js",
-      "src/ui/ptBr.js"
+      "src/ui/ptBr.js",
+      "src/layers/firms/source.js"
     ],
     "external": ["cesium"]
   },
@@ -2249,7 +2250,12 @@
       "src/ui/barreto/detailsModel.js",
       "src/ui/barreto/details.js",
       "src/ui/barreto/liveText.js",
-      "src/layers/brazilRadar/index.js"
+      "src/layers/brazilRadar/index.js",
+      "src/ui/barreto/places.js",
+      "src/ui/barreto/placeInput.js",
+      "src/ui/barreto/routeCorridor.js",
+      "src/ui/barreto/searchBar.js",
+      "src/ui/barreto/routePlanner.js"
     ],
     "external": [
       "hls.js",
@@ -2891,7 +2897,8 @@
       "src/navigationPolicy.js",
       "src/ui/shareRestoration.js",
       "src/ui/uiLifetime.js",
-      "src/ui/ptBr.js"
+      "src/ui/ptBr.js",
+      "src/layers/firms/source.js"
     ],
     "external": []
   },

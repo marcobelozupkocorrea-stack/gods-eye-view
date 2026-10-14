@@ -1,4 +1,7 @@
-import { viewerMsaaSamples } from '../maps/devicePerformance.js';
+import {
+  isConstrainedDevice,
+  viewerMsaaSamples,
+} from '../maps/devicePerformance.js';
 import * as Cesium from 'cesium';
 import { applyModelAtmosphereWorkaround } from './atmosphereCompat.js';
 
@@ -122,7 +125,11 @@ export function createApplicationViewer({ container, creditContainer }) {
     baseLayer: false,
     creditContainer,
     msaaSamples: viewerMsaaSamples(),
-    contextOptions: { webgl: { preserveDrawingBuffer: true } },
+    // barreto.top: keeping the drawing buffer (only needed to snapshot the
+    // canvas for voice) costs phone GPUs a full-screen copy every frame.
+    contextOptions: {
+      webgl: { preserveDrawingBuffer: !isConstrainedDevice() },
+    },
   });
   try {
     viewer.targetFrameRate = 60;

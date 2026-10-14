@@ -2,12 +2,20 @@
  * barreto.top: `lang: 'pt'` asks for Portuguese instructions and
  * `avoidTolls` for a toll-free car route; both are omitted when unset, so the
  * URL is unchanged for every other caller. */
-export function directionsRequestUrl(mode, a, b, { lang, avoidTolls } = {}) {
-  const coords = `${a.lon.toFixed(6)},${a.lat.toFixed(6)};${b.lon.toFixed(6)},${b.lat.toFixed(6)}`;
+export function directionsRequestUrl(
+  mode,
+  a,
+  b,
+  { lang, avoidTolls, stops = [], depart } = {},
+) {
+  const coords = [a, ...(Array.isArray(stops) ? stops : []), b]
+    .map((p) => `${p.lon.toFixed(6)},${p.lat.toFixed(6)}`)
+    .join(';');
   return (
     `/api/route?profile=${encodeURIComponent(mode)}&coords=${encodeURIComponent(coords)}&steps=1` +
     (lang === 'pt' ? '&lang=pt' : '') +
-    (avoidTolls && mode === 'car' ? '&avoid=tolls' : '')
+    (avoidTolls && mode === 'car' ? '&avoid=tolls' : '') +
+    (depart && mode === 'car' ? `&depart=${encodeURIComponent(depart)}` : '')
   );
 }
 
@@ -17,11 +25,16 @@ export function createDirectionsSource({
   endpoint = '/api/route',
 } = {}) {
   return {
-    async getRoute({ mode, a, b, lang, avoidTolls }, { signal } = {}) {
+    async getRoute(
+      { mode, a, b, lang, avoidTolls, stops, depart },
+      { signal } = {},
+    ) {
       signal?.throwIfAborted();
       const query = directionsRequestUrl(mode, a, b, {
         lang,
         avoidTolls,
+        stops,
+        depart,
       }).split('?')[1];
       const response = await fetchImpl(`${endpoint}?${query}`, {
         signal,

@@ -58,10 +58,45 @@ const MANEUVERS = Object.freeze({
   WAYPOINT_REACHED: ['notification', null],
 });
 
+/** TPEG-TEC main cause codes TomTom attaches to traffic sections, in pt-BR. */
+export const TRAFFIC_CAUSES_PT = Object.freeze({
+  1: 'Congestionamento',
+  2: 'Acidente',
+  3: 'Obras',
+  4: 'Faixas estreitadas',
+  5: 'Via interditada',
+  6: 'Pista escorregadia',
+  7: 'Aquaplanagem',
+  8: 'Incêndio',
+  9: 'Condições perigosas',
+  10: 'Objeto na pista',
+  11: 'Animais na pista',
+  12: 'Pessoas na pista',
+  13: 'Veículo quebrado',
+  14: 'Veículo na contramão',
+  15: 'Resgate em andamento',
+  16: 'Restrição de trânsito',
+  17: 'Tempo severo',
+  18: 'Visibilidade reduzida',
+  19: 'Chuva',
+  20: 'Pessoas imprudentes',
+  21: 'Altura restrita',
+  22: 'Restrição de veículos',
+  23: 'Carga perigosa',
+  24: 'Alerta de segurança',
+  25: 'Atraso de veículos',
+  26: 'Atraso de veículos',
+  27: 'Evento',
+  28: 'Fechamento de equipamento',
+});
+
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
 
 /** Build the TomTom request URL. `points` are [lon, lat] pairs. */
-export function tomtomRouteUrl(points, { key, lang = 'pt-BR', avoidTolls }) {
+export function tomtomRouteUrl(
+  points,
+  { key, lang = 'pt-BR', avoidTolls, depart },
+) {
   const locations = points
     .map(([lon, lat]) => `${lat.toFixed(6)},${lon.toFixed(6)}`)
     .join(':');
@@ -78,6 +113,7 @@ export function tomtomRouteUrl(points, { key, lang = 'pt-BR', avoidTolls }) {
     computeTravelTimeFor: 'all',
   });
   if (avoidTolls) q.append('avoid', 'tollRoads');
+  if (depart) q.append('departAt', depart);
   return `${BASE}/${locations}/json?${q}`;
 }
 
@@ -146,9 +182,13 @@ function projectOne(route) {
     const to = num(s.endPointIndex);
     if (from === null || to === null || to <= from || to >= points.length)
       continue;
+    const causes = Array.isArray(s.tec?.causes)
+      ? s.tec.causes.map((c) => num(c?.mainCauseCode)).filter((c) => c !== null)
+      : [];
     congestion.push({
       from,
       to,
+      causes,
       category:
         typeof s.simpleCategory === 'string' ? s.simpleCategory : 'OTHER',
       magnitude: num(s.magnitudeOfDelay) ?? 0,
@@ -156,10 +196,47 @@ function projectOne(route) {
       speedKmh: num(s.effectiveSpeedInKmh),
     });
   }
+  // Anything on the route that is more than plain slow traffic: an accident,
+  // roadworks, a closed road, a broken-down vehicle…
+  const incidents = congestion
+    .filter(
+      (c) =>
+        c.category === 'ROAD_WORK' ||
+        c.category === 'ROAD_CLOSURE' ||
+        c.causes.some((code) => code !== 1),
+    )
+    .map((c) => {
+      const code = c.causes.find((x) => x !== 1) ?? null;
+      const [lon, lat] = points[c.from];
+      return {
+        lat,
+        lon,
+        pointIndex: c.from,
+        kind:
+          c.category === 'ROAD_CLOSURE' || code === 5
+            ? 'closure'
+            : code === 2
+              ? 'accident'
+              : c.category === 'ROAD_WORK' || code === 3
+                ? 'roadwork'
+                : code === 17 || code === 19 || code === 6 || code === 7
+                  ? 'weather'
+                  : 'hazard',
+        label:
+          (code && TRAFFIC_CAUSES_PT[code]) ||
+          (c.category === 'ROAD_CLOSURE'
+            ? 'Via interditada'
+            : c.category === 'ROAD_WORK'
+              ? 'Obras'
+              : 'Ocorrência'),
+        delayS: c.delayS,
+      };
+    });
   return {
     ok: true,
     profile: 'car',
     provider: 'tomtom',
+    incidents,
     distanceM,
     durationS,
     geometry: points,
@@ -251,14 +328,22 @@ export function createTomTomRouteBudget({
  */
 export async function fetchTomTomRoute(
   points,
-  { key, lang, avoidTolls, budget, fetchImpl = fetch, timeoutMs = 12_000 },
+  {
+    key,
+    lang,
+    avoidTolls,
+    depart,
+    budget,
+    fetchImpl = fetch,
+    timeoutMs = 12_000,
+  },
 ) {
   if (!key || !(await budget.take())) return null;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetchImpl(
-      tomtomRouteUrl(points, { key, lang, avoidTolls }),
+      tomtomRouteUrl(points, { key, lang, avoidTolls, depart }),
       {
         signal: controller.signal,
         redirect: 'error',

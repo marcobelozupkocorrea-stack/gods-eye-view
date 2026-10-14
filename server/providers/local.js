@@ -25,6 +25,7 @@ import { mapillaryProxy } from './mapillary.js';
 import { keySetupEndpoint } from '../standalone/key-setup.js';
 import { weatherProxy } from './weather.js';
 import { brazilRadarProxy } from './brazilRadar.js';
+import { barretoPlacesProxy } from './barretoPlaces.js';
 import { firePerimetersProxy } from './firePerimeters.js';
 import { inmetAlertsProxy } from './inmetAlerts.js';
 import { defesaCivilAlertsProxy } from './defesaCivilAlerts.js';
@@ -66,6 +67,7 @@ function localProviderPlugins({ realtime } = {}) {
     windProxy(),
     weatherProxy(),
     brazilRadarProxy(),
+    barretoPlacesProxy(),
     cycloneProxy(),
     mapillaryProxy(),
     firePerimetersProxy(),
