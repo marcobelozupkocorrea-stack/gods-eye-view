@@ -48,7 +48,15 @@ export function createWeatherLayer({
   const radar = id === 'weather-radar';
   const lightning = id === 'weather-lightning';
   const satellite = !radar && !lightning;
-  let product = radar ? 'radar' : lightning ? 'lightning' : 'clouds-regional';
+  // barreto.top (pt-BR): GOES regional stops north of Brazil; default to global.
+  const ptBr = /^pt\b/i.test(documentRef?.documentElement?.lang || '');
+  let product = radar
+    ? 'radar'
+    : lightning
+      ? 'lightning'
+      : ptBr
+        ? 'clouds'
+        : 'clouds-regional';
   let opacity = 'strong';
   let infrared = 'filtered';
   let viewer = null,
@@ -576,8 +584,8 @@ export function createWeatherLayer({
         chips: [
           ...(satellite
             ? [
-                ['clouds-regional', 'N. America'],
-                ['clouds', 'Global'],
+                ['clouds-regional', ptBr ? 'América do Norte' : 'N. America'],
+                ['clouds', ptBr ? 'Global (Brasil)' : 'Global'],
               ].map(([value, label]) => ({
                 id: value,
                 label,

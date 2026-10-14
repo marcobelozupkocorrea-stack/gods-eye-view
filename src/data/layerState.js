@@ -1,6 +1,10 @@
 import { normalizeIdSwitches, patchRequestedIdSwitches } from './idSwitches.js';
 import reservationRows from './layerStateTokenReservations.json' with { type: 'json' };
 
+const PT_BR_PAGE = /^pt\b/i.test(
+  globalThis.document?.documentElement?.lang || '',
+);
+
 const VALID_DISPOSITIONS = new Set([
   'enabled-only',
   'enabled+options',
@@ -328,7 +332,9 @@ const OPTION_GROUPS = Object.freeze({
     enumOption(
       'product',
       'p',
-      'clouds-regional',
+      // barreto.top (pt-BR): GOES regional stops north of Brazil, so the
+      // global mosaic is the useful default there.
+      PT_BR_PAGE ? 'clouds' : 'clouds-regional',
       ['clouds', 'clouds-regional'],
       { clouds: 'g', 'clouds-regional': 'r' },
     ),
