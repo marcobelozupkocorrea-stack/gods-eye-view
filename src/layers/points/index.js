@@ -310,6 +310,17 @@ export function createPointEventsLayer({
       _lastError = null;
     },
 
+    /**
+     * barreto.top: open the card of one item by its stable id (used by the
+     * "Brasil agora" list). Returns false while the item is not loaded yet.
+     */
+    focusById(stableId) {
+      if (!_enabled || !_rowById.has(String(stableId))) return false;
+      _selectedId = String(stableId);
+      publishSelectedCard();
+      return true;
+    },
+
     /** Event facts for the analyst query engine. */
     getAnalystRecords(maxCount = 2000) {
       if (!_points || !_points.show) return [];

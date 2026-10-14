@@ -98,7 +98,6 @@ export const BRAZIL_FIRST_VISIT_LAYER_IDS = Object.freeze([
   'inmet-alerts',
   'defesa-civil-alerts',
   'cemaden-alerts',
-  'cctv',
 ]);
 
 /** First-visit layers for the page language ([] keeps upstream behaviour). */

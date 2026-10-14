@@ -27,6 +27,9 @@ function fixture() {
     clearTimeout(id) {
       timers.delete(id);
     },
+    // barreto.top: the pt-BR welcome is chosen by page language.
+    isPortugueseUi: () => false,
+    initBarretoExperience: () => ({ destroy() {} }),
     initFirstRunExperience() {
       events.push('welcome');
       return { destroy: () => events.push('welcome:destroy') };

@@ -1,0 +1,589 @@
+/* ── barreto.top: Portuguese experience ─────────────────────────────
+   "Brasil agora" panel, "Como usar" guide, welcome card, Brazilian city
+   row, and small-screen decluttering. Only active in the pt-BR build. */
+
+/* ---------- Brasil agora: placement in the left stack ---------- */
+#brasil-panel[hidden] {
+  display: none !important;
+}
+
+#left-panel-stack > #brasil-panel {
+  --panel-expanded-width: 320px;
+  position: relative;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  z-index: auto;
+  order: 0;
+  flex: 0 0 auto;
+  min-height: 0;
+  max-height: none;
+  width: var(--panel-expanded-width);
+  pointer-events: auto;
+}
+
+#left-panel-stack > #brasil-panel.collapsed {
+  width: var(--left-collapsed-width);
+}
+
+#left-panel-stack > #brasil-panel:not(.collapsed) {
+  box-sizing: border-box;
+  flex: 0 1 var(--left-panel-allocated-height, auto);
+  height: var(--left-panel-allocated-height, auto);
+  max-height: var(--left-panel-allocated-height, 70vh);
+}
+
+#left-panel-stack > #brasil-panel:not(.collapsed) .brasil-panel-inner {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+#brasil-panel.collapsed .brasil-panel-body {
+  display: none;
+}
+
+#brasil-panel.collapsed .panel-title {
+  font-size: 8px;
+  letter-spacing: 1.8px;
+}
+
+#brasil-panel.collapsed .brasil-panel-inner {
+  padding-bottom: 10px;
+}
+
+#brasil-panel .panel-title {
+  color: var(--accent);
+}
+
+:root[data-ui-theme='cyber'] #left-panel-stack > #brasil-panel {
+  --panel-expanded-width: max(var(--cyber-panel-width, 272px), 310px);
+}
+
+:root[data-ui-theme='cyber'] #left-panel-stack > #brasil-panel.collapsed {
+  width: var(--cyber-panel-collapsed-width, 200px);
+}
+
+:root[data-ui-theme='cyber']
+  #left-panel-stack
+  > #brasil-panel.collapsed
+  .brasil-panel-inner {
+  box-sizing: border-box;
+  height: 50px;
+  min-height: 50px;
+  overflow: hidden;
+}
+
+/* ---------- Brasil agora: content ---------- */
+.brasil-panel-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  font-family: var(--font-sans);
+}
+
+.brasil-intro {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.brasil-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.brasil-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  color: var(--text-secondary);
+  font: 600 10.5px/1.2 var(--font-sans);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.brasil-chip.on {
+  color: var(--text-primary);
+  background: var(--accent-dim);
+  border-color: rgba(0, 212, 255, 0.55);
+}
+
+.brasil-chip.error {
+  border-style: dashed;
+}
+
+.brasil-chip-count {
+  padding: 0 5px;
+  color: var(--bg-dark);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.brasil-chip:not(.on) .brasil-chip-count {
+  background: var(--text-dim);
+}
+
+.brasil-filters {
+  display: flex;
+  gap: 6px;
+}
+
+.brasil-select,
+.brasil-search {
+  min-width: 0;
+  padding: 6px 8px;
+  color: var(--text-primary);
+  font: 12px/1.2 var(--font-sans);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+}
+
+.brasil-select {
+  flex: 0 0 auto;
+}
+
+.brasil-search {
+  flex: 1 1 auto;
+}
+
+.brasil-select:focus-visible,
+.brasil-search:focus-visible,
+.brasil-chip:focus-visible,
+.brasil-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.brasil-status {
+  margin: 0;
+  color: var(--text-dim);
+  font: 10px/1.3 var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.brasil-list {
+  flex: 1 1 auto;
+  min-height: 60px;
+  margin: 0;
+  padding: 0 2px 0 0;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.brasil-list li + li {
+  margin-top: 4px;
+}
+
+.brasil-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  color: var(--text-primary);
+  text-align: left;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.brasil-item:hover {
+  background: rgba(0, 212, 255, 0.08);
+  border-color: rgba(0, 212, 255, 0.3);
+}
+
+.brasil-item.busy {
+  opacity: 0.6;
+}
+
+.brasil-dot {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  margin-top: 3px;
+  background: var(--dot, #ffd600);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--dot, #ffd600);
+}
+
+.brasil-item-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.brasil-item-title {
+  font: 700 11px/1.25 var(--font-sans);
+  letter-spacing: 0.02em;
+}
+
+.brasil-item-sub {
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.brasil-item-meta {
+  color: var(--text-dim);
+  font: 9.5px/1.3 var(--font-mono);
+}
+
+.brasil-go {
+  flex: 0 0 auto;
+  color: var(--text-dim);
+  font-size: 17px;
+}
+
+.brasil-item:hover .brasil-go {
+  color: var(--accent);
+}
+
+.brasil-more {
+  padding: 6px;
+  color: var(--accent);
+  font: 600 11px var(--font-sans);
+  background: transparent;
+  border: 1px dashed rgba(0, 212, 255, 0.35);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* ---------- Brazilian cities in the LOCATION tray ---------- */
+html[lang^='pt'] #location-pills,
+html[lang^='pt'] #poi-row,
+html[lang^='pt'] #location-bar-divider {
+  display: none !important;
+}
+
+.barreto-city-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0 0 8px;
+}
+
+#location-bar.collapsed .barreto-city-row {
+  display: none;
+}
+
+.barreto-city {
+  padding: 5px 9px;
+  color: var(--text-primary);
+  font: 600 11px/1.2 var(--font-sans);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.barreto-city:hover,
+.barreto-city:focus-visible {
+  background: var(--accent-dim);
+  border-color: rgba(0, 212, 255, 0.5);
+}
+
+/* ---------- "Como usar" guide ---------- */
+#barreto-help {
+  position: fixed;
+  z-index: 400;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 6, 12, 0.6);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+#barreto-help[hidden] {
+  display: none;
+}
+
+#barreto-help.visible {
+  opacity: 1;
+}
+
+.barreto-help-card {
+  display: flex;
+  flex-direction: column;
+  width: min(44rem, 100%);
+  max-height: calc(100dvh - 32px);
+  color: var(--text-primary);
+  background: linear-gradient(
+    145deg,
+    rgba(10, 27, 37, 0.98),
+    rgba(7, 13, 22, 0.97)
+  );
+  border: 1px solid rgba(54, 220, 255, 0.42);
+  border-radius: 12px;
+  box-shadow: 0 1.4rem 4.5rem rgba(0, 0, 0, 0.72);
+}
+
+.barreto-help-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 8px;
+}
+
+.barreto-help-card h2 {
+  margin: 0;
+  font: 700 18px var(--font-sans);
+}
+
+.barreto-help-close {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.barreto-help-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 10px 18px;
+  padding: 4px 16px 12px;
+  overflow-y: auto;
+}
+
+.barreto-help-body section h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 4px;
+  color: var(--accent);
+  font: 700 12.5px var(--font-sans);
+}
+
+.barreto-help-body section h3 .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.barreto-help-body ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-secondary);
+  font: 12.5px/1.45 var(--font-sans);
+}
+
+.barreto-help-body li + li {
+  margin-top: 3px;
+}
+
+.barreto-help-body b {
+  color: var(--text-primary);
+}
+
+.barreto-inline-icon {
+  font-size: 15px;
+  vertical-align: -3px;
+}
+
+.barreto-help-card footer {
+  padding: 8px 16px 14px;
+  color: var(--text-dim);
+  font: 10.5px/1.4 var(--font-sans);
+  border-top: 1px solid var(--glass-border);
+}
+
+/* ---------- Welcome card ---------- */
+#barreto-welcome {
+  position: fixed;
+  z-index: 175;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+  width: min(34rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 1.5rem);
+  padding: 1.15rem;
+  overflow-y: auto;
+  color: var(--text-primary);
+  background: linear-gradient(
+    145deg,
+    rgba(10, 27, 37, 0.97),
+    rgba(7, 13, 22, 0.95)
+  );
+  border: 1px solid rgba(54, 220, 255, 0.42);
+  border-radius: 0.65rem;
+  box-shadow: 0 1.4rem 4.5rem rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(28px) saturate(1.25);
+  -webkit-backdrop-filter: blur(28px) saturate(1.25);
+  opacity: 0;
+  transform: translate(-50%, calc(-50% + 0.8rem)) scale(0.985);
+  transition:
+    opacity 220ms ease,
+    transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events: none;
+}
+
+#barreto-welcome.visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  pointer-events: auto;
+}
+
+.barreto-welcome-kicker {
+  color: var(--accent);
+  font: 10px var(--font-mono);
+  letter-spacing: 0.22em;
+}
+
+#barreto-welcome h2 {
+  margin: 0;
+  font: 700 21px/1.2 var(--font-sans);
+}
+
+.barreto-welcome-lead {
+  margin: 0;
+  color: var(--text-secondary);
+  font: 13px/1.45 var(--font-sans);
+}
+
+.barreto-welcome-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.barreto-welcome-choices button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  color: var(--text-primary);
+  text-align: left;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(54, 220, 255, 0.22);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.barreto-welcome-choices button:first-child {
+  background: rgba(0, 212, 255, 0.1);
+  border-color: rgba(54, 220, 255, 0.6);
+}
+
+.barreto-welcome-choices button:hover,
+.barreto-welcome-choices button:focus-visible {
+  background: rgba(0, 212, 255, 0.14);
+  border-color: rgba(54, 220, 255, 0.7);
+}
+
+.barreto-welcome-choices button > .material-symbols-outlined:first-child {
+  color: var(--accent);
+  font-size: 22px;
+}
+
+.barreto-welcome-choices strong {
+  display: block;
+  font: 700 12px var(--font-mono);
+  letter-spacing: 0.14em;
+}
+
+.barreto-welcome-choices small {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font: 12px/1.35 var(--font-sans);
+}
+
+.barreto-welcome-choices button > span:nth-child(2) {
+  flex: 1 1 auto;
+}
+
+.barreto-welcome-arrow {
+  color: var(--text-dim);
+}
+
+.barreto-welcome-guide {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  color: var(--accent);
+  font: 600 12.5px var(--font-sans);
+  background: transparent;
+  border: 1px dashed rgba(0, 212, 255, 0.4);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.barreto-welcome-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  font: 11.5px var(--font-sans);
+}
+
+.barreto-welcome-status {
+  min-height: 1em;
+  margin: 0;
+  color: var(--accent);
+  font: 11px var(--font-mono);
+}
+
+/* ---------- Small screens: declutter ---------- */
+@media (max-width: 720px) {
+  /* The decorative HUD text sits on top of the panels on a phone. */
+  html[lang^='pt'] #intel-hud {
+    display: none !important;
+  }
+
+  #left-panel-stack > #brasil-panel,
+  #left-panel-stack > #brasil-panel.collapsed {
+    width: 100%;
+  }
+
+  /* Open on a phone, BRASIL AGORA takes the whole column between the top
+     buttons and the bottom dock; the other panels step aside until it is
+     closed (choosing an alert closes it, so the map comes straight back). */
+  #left-panel-stack:has(> #brasil-panel:not(.collapsed)) {
+    bottom: calc(2vh + 7.5rem);
+    z-index: 30;
+    overflow: hidden;
+  }
+
+  #left-panel-stack:has(> #brasil-panel:not(.collapsed)) > :not(#brasil-panel),
+  body:has(#brasil-panel:not(.collapsed)) #right-context-rail {
+    display: none !important;
+  }
+
+  #left-panel-stack > #brasil-panel:not(.collapsed) {
+    flex: 1 1 auto;
+    height: 100%;
+    max-height: 100%;
+  }
+
+  .barreto-help-body {
+    grid-template-columns: 1fr;
+  }
+}

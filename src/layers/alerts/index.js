@@ -305,6 +305,17 @@ export function createCapAlertsLayer({
       _lastError = null;
     },
 
+    /**
+     * barreto.top: open the card of one item by its stable id (used by the
+     * "Brasil agora" list). Returns false while the item is not loaded yet.
+     */
+    focusById(stableId) {
+      if (!_enabled || !_rowById.has(String(stableId))) return false;
+      _selectedId = String(stableId);
+      publishSelectedCard();
+      return true;
+    },
+
     /** Warning facts with their card anchor, for the analyst query engine. */
     getAnalystRecords(maxCount = 2000) {
       if (!_dataSource || !_dataSource.show) return [];

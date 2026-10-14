@@ -2235,7 +2235,13 @@
       "src/data/deter.js",
       "src/layers/points/cards.js",
       "src/layers/points/index.js",
-      "src/maps/devicePerformance.js"
+      "src/maps/devicePerformance.js",
+      "src/ui/barreto/chrome.js",
+      "src/ui/barreto/help.js",
+      "src/ui/barreto/welcome.js",
+      "src/ui/barreto/brasilFeed.js",
+      "src/ui/barreto/brasilPanel.js",
+      "src/ui/barreto/index.js"
     ],
     "external": [
       "hls.js",

@@ -1,4 +1,6 @@
 import { initFirstRunExperience } from '../firstRunExperience.js';
+import { initBarretoExperience } from '../ui/barreto/index.js';
+import { isPortugueseUi } from '../ui/ptBr.js';
 
 /** Reveal welcome controls only after restoration and the loading transition. */
 export function startApplicationChrome({
@@ -6,7 +8,10 @@ export function startApplicationChrome({
   styleManager,
   dataManager,
   signal,
-  initializeWelcome = initFirstRunExperience,
+  // barreto.top: the pt-BR build gets its own Portuguese welcome and guide.
+  initializeWelcome = isPortugueseUi()
+    ? initBarretoExperience
+    : initFirstRunExperience,
   initializeSettings,
 }) {
   let disposed = false;
