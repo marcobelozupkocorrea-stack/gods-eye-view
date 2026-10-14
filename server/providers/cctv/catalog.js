@@ -185,10 +185,15 @@ export function createCctvCatalog({ sourceRoot = process.cwd() } = {}) {
     // Single-flight: a burst of requests arriving past the TTL shares ONE refresh
     // instead of each launching the full multi-provider refetch. The `.finally`
     // clears the ref so the next post-TTL cycle starts fresh.
-    if (_cctvSourceInflight) return _cctvSourceInflight;
-    _cctvSourceInflight = refreshCctvSources().finally(() => {
-      _cctvSourceInflight = null;
-    });
+    if (!_cctvSourceInflight) {
+      _cctvSourceInflight = refreshCctvSources().finally(() => {
+        _cctvSourceInflight = null;
+      });
+    }
+    // barreto.top: stale-while-revalidate. With a catalog already cached,
+    // answer from it at once and let the multi-provider refresh (~10 s)
+    // finish in the background instead of stalling every camera request.
+    if (_cctvSourceCache.length) return _cctvSourceCache;
     return _cctvSourceInflight;
   }
 

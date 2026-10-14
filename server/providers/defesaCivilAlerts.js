@@ -68,6 +68,28 @@ export function defesaCivilAlertsProxy({
     return { at, rows };
   }
 
+  /** One upstream refresh at a time; resolves to the fresh snapshot or null. */
+  const startRefresh = () => {
+    if (!inflight) {
+      inflight = refresh()
+        .then((fresh) => {
+          snapshot = fresh;
+          return fresh;
+        })
+        .catch((err) => {
+          console.warn(
+            '[defesa-civil-alerts] refresh failed:',
+            err?.message || err,
+          );
+          return null;
+        })
+        .finally(() => {
+          inflight = null;
+        });
+    }
+    return inflight;
+  };
+
   const installMiddleware = (server) => {
     server.middlewares.use('/api/defesacivil/alerts', async (req, res) => {
       const send = (status, body) => {
@@ -85,32 +107,19 @@ export function defesaCivilAlertsProxy({
       try {
         const current = (entry) =>
           entry.rows.filter((row) => isCurrentWarning(row, now()));
-        if (snapshot && now() - snapshot.at < TTL_MS) {
+        if (snapshot) {
+          // Stale-while-revalidate: answer at once from the last snapshot and
+          // refresh in the background, so nobody waits on the slow upstream.
+          const expired = now() - snapshot.at >= TTL_MS;
+          if (expired) void startRefresh();
           send(200, {
             fetchedAt: snapshot.at,
-            stale: false,
+            stale: expired,
             rows: current(snapshot),
           });
           return;
         }
-        if (!inflight) {
-          inflight = refresh()
-            .then((fresh) => {
-              snapshot = fresh;
-              return fresh;
-            })
-            .catch((err) => {
-              console.warn(
-                '[defesa-civil-alerts] refresh failed:',
-                err?.message || err,
-              );
-              return null;
-            })
-            .finally(() => {
-              inflight = null;
-            });
-        }
-        const fresh = await inflight;
+        const fresh = await startRefresh();
         const entry = fresh || snapshot;
         if (!entry) {
           send(502, { error: 'idap_unavailable' });

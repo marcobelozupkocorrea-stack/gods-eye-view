@@ -134,6 +134,25 @@ fi
 
 [ -n "$PID" ] || start
 
+# Keep the slow upstream caches warm (fires, alerts, cameras, launches…) so
+# no visitor is the one waiting for a cold refresh. Disable with
+# GEV_WARM_PATHS="" ; GEV_WARM_SECONDS sets the cadence.
+WARM_PATHS="${GEV_WARM_PATHS-/api/firms /api/defesacivil/alerts /api/inmet/alerts /api/deter/alerts /api/cemaden/alerts /api/cctv/sources /api/launches /api/cyclones /api/vessels}"
+WARM_HOST=$(printf %s "${GEV_ALLOWED_HOSTS:-localhost}" | cut -d, -f1)
+if [ -n "$WARM_PATHS" ]; then
+  (
+    sleep 15
+    while :; do
+      for p in $WARM_PATHS; do
+        curl -s -o /dev/null -m 180 -H "Host: ${WARM_HOST:-localhost}" \
+          "http://127.0.0.1:4173$p" || true
+      done
+      sleep "${GEV_WARM_SECONDS:-240}"
+    done
+  ) </dev/null >/dev/null 2>&1 &
+  log "aquecimento de cache ativo a cada ${GEV_WARM_SECONDS:-240}s"
+fi
+
 # Stay in the foreground; if the server dies, exit so Docker restarts us.
 while kill -0 "$PID" 2>/dev/null; do
   sleep 5 &

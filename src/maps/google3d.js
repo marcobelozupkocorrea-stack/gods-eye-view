@@ -1,3 +1,7 @@
+import {
+  isConstrainedDevice,
+  photorealisticTileOptions,
+} from './devicePerformance.js';
 const clean = (value) => String(value || '').trim();
 
 /**
@@ -69,7 +73,11 @@ export function createGoogleDirectTileset(Cesium, key) {
   // Tiles keep drawing their own texture while draped weather loads.
   return Cesium.createGooglePhotorealistic3DTileset(
     { key, onlyUsingWithGoogleGeocoder: true },
-    { asynchronouslyLoadImagery: true },
+    {
+      asynchronouslyLoadImagery: true,
+      // Cesium's helper defaults already match the desktop budget.
+      ...(isConstrainedDevice() ? photorealisticTileOptions() : {}),
+    },
   );
 }
 
@@ -98,8 +106,7 @@ export async function createGoogleTokenTileset(Cesium, tokens) {
   });
   // The settings Cesium's Google helper applies to the key route.
   return Cesium.Cesium3DTileset.fromUrl(resource, {
-    cacheBytes: 1536 * 1024 * 1024,
-    maximumCacheOverflowBytes: 1024 * 1024 * 1024,
+    ...photorealisticTileOptions(),
     enableCollision: true,
     // Tiles keep drawing their own texture while draped weather loads.
     asynchronouslyLoadImagery: true,
@@ -121,8 +128,7 @@ export async function createGoogleIonTileset(
   signal?.throwIfAborted();
   // Match the installed SDK's Google helper rendering/cache defaults.
   return Cesium.Cesium3DTileset.fromUrl(resource, {
-    cacheBytes: 1536 * 1024 * 1024,
-    maximumCacheOverflowBytes: 1024 * 1024 * 1024,
+    ...photorealisticTileOptions(),
     enableCollision: true,
     // Tiles keep drawing their own texture while draped weather loads.
     asynchronouslyLoadImagery: true,

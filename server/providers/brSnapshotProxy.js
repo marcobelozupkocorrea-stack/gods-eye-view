@@ -48,10 +48,13 @@ export function brSnapshotProxy({
         return;
       }
       try {
-        if (snapshot && now() - snapshot.at < ttlMs) {
+        if (snapshot) {
+          // Stale-while-revalidate: answer at once, refresh in the background.
+          const expired = now() - snapshot.at >= ttlMs;
+          if (expired) void load();
           send(200, {
             fetchedAt: snapshot.at,
-            stale: false,
+            stale: expired,
             rows: snapshot.rows,
           });
           return;

@@ -1,3 +1,4 @@
+import { viewerMsaaSamples } from '../maps/devicePerformance.js';
 import * as Cesium from 'cesium';
 import { applyModelAtmosphereWorkaround } from './atmosphereCompat.js';
 
@@ -120,7 +121,7 @@ export function createApplicationViewer({ container, creditContainer }) {
     infoBox: false,
     baseLayer: false,
     creditContainer,
-    msaaSamples: 4,
+    msaaSamples: viewerMsaaSamples(),
     contextOptions: { webgl: { preserveDrawingBuffer: true } },
   });
   try {

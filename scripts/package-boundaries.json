@@ -22,7 +22,11 @@
   },
   "viewer": {
     "exports": ["./application/viewer"],
-    "modules": ["src/app/viewer.js", "src/app/atmosphereCompat.js"],
+    "modules": [
+      "src/app/viewer.js",
+      "src/app/atmosphereCompat.js",
+      "src/maps/devicePerformance.js"
+    ],
     "external": ["cesium"]
   },
   "vite-build": {
@@ -1361,7 +1365,8 @@
       "src/maps/terrainRetry.js",
       "src/keySetupCore.mjs",
       "src/localRequestGate.mjs",
-      "src/maps/imageryHost.js"
+      "src/maps/imageryHost.js",
+      "src/maps/devicePerformance.js"
     ],
     "external": ["cesium"]
   },
@@ -2229,7 +2234,8 @@
       "src/data/cemaden.js",
       "src/data/deter.js",
       "src/layers/points/cards.js",
-      "src/layers/points/index.js"
+      "src/layers/points/index.js",
+      "src/maps/devicePerformance.js"
     ],
     "external": [
       "hls.js",
