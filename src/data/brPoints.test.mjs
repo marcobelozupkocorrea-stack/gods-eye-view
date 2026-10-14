@@ -225,3 +225,37 @@ test('snapshot proxy caches within TTL and serves stale on failure', async () =>
   assert.equal(stale.body.stale, true);
   assert.deepEqual(stale.body.rows, [{ id: 1 }]);
 });
+
+test('hashed bundle files are cached immutably, but only when served', async () => {
+  const { assetCacheHeaders, isHashedAssetPath, IMMUTABLE_CACHE } =
+    await import('../../server/providers/assetCache.js');
+  assert.equal(isHashedAssetPath('/assets/index-CV_5zwPv.js'), true);
+  assert.equal(isHashedAssetPath('/assets/names-DA56NpEe.json?x=1'), true);
+  assert.equal(isHashedAssetPath('/index.html'), false);
+  assert.equal(isHashedAssetPath('/api/firms'), false);
+  let mw;
+  assetCacheHeaders().configurePreviewServer({
+    middlewares: { use: (fn) => (mw = fn) },
+  });
+  const run = (status, type = 'text/javascript') => {
+    const headers = {};
+    const res = {
+      setHeader: (k, v) => (headers[k.toLowerCase()] = v),
+      writeHead(code, h) {
+        for (const [k, v] of Object.entries(h || {}))
+          headers[k.toLowerCase()] = v;
+        return code;
+      },
+    };
+    mw({ method: 'GET', url: '/assets/index-CV_5zwPv.js' }, res, () => {});
+    res.writeHead(status, {
+      'Cache-Control': 'no-cache',
+      'Content-Type': type,
+    });
+    return headers['cache-control'];
+  };
+  assert.equal(run(200), IMMUTABLE_CACHE);
+  assert.equal(run(304), IMMUTABLE_CACHE);
+  assert.equal(run(404), 'no-cache', 'errors keep the default');
+  assert.equal(run(200, 'text/html'), 'no-cache', 'SPA fallback is not cached');
+});

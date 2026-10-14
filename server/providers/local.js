@@ -28,6 +28,7 @@ import { inmetAlertsProxy } from './inmetAlerts.js';
 import { defesaCivilAlertsProxy } from './defesaCivilAlerts.js';
 import { deterAlertsProxy } from './deterAlerts.js';
 import { cemadenAlertsProxy } from './cemadenAlerts.js';
+import { assetCacheHeaders } from './assetCache.js';
 import { cycloneProxy } from './cyclones.js';
 import { windProxy } from './wind.js';
 
@@ -68,6 +69,7 @@ function localProviderPlugins({ realtime } = {}) {
     defesaCivilAlertsProxy(),
     deterAlertsProxy(),
     cemadenAlertsProxy(),
+    assetCacheHeaders(),
     keySetupEndpoint(),
   ];
 }
