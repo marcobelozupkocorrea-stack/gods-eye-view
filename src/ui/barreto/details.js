@@ -5,11 +5,13 @@
  * links to the original sources. Desktop: a panel on the right. Phone: a
  * bottom sheet. The small in-map card keeps working as before.
  */
+import * as Cesium from 'cesium';
 import {
   aircraftSheet,
   capAlertSheet,
   cemadenSheet,
   deterSheet,
+  earthquakeSheet,
   fireSheet,
   satelliteSheet,
   vesselSheet,
@@ -60,7 +62,7 @@ export function renderSheetHtml(s) {
     ${s.note ? `<p class="barreto-details-note">${escapeHtml(s.note)}</p>` : ''}`;
 }
 
-export function initDetailsSheet({ dataManager, signal } = {}) {
+export function initDetailsSheet({ dataManager, styleManager, signal } = {}) {
   const panel = document.createElement('aside');
   panel.id = 'barreto-details';
   panel.className = 'barreto-details';
@@ -275,9 +277,47 @@ export function initDetailsSheet({ dataManager, signal } = {}) {
             ? () => cemadenSheet(record)
             : layerId === 'deter-alerts'
               ? () => deterSheet(record)
-              : null;
+              : layerId === 'earthquakes'
+                ? () => earthquakeSheet(record)
+                : null;
     if (build) open({ layerId, id: String(id), build });
   }
+
+  // Earthquakes have no click handler of their own: pick their discs here.
+  let quakeHandler = null;
+  function installQuakePick() {
+    const viewer = styleManager?.viewer;
+    if (quakeHandler || !viewer || viewer.isDestroyed?.())
+      return Boolean(quakeHandler);
+    quakeHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    quakeHandler.setInputAction((click) => {
+      let picked = null;
+      try {
+        picked = viewer.scene.pick(click.position);
+      } catch {
+        return;
+      }
+      const entity = picked?.id;
+      const id = typeof entity?.id === 'string' ? entity.id : '';
+      if (id.startsWith('earthquake:')) {
+        const record = entity.properties?.barreto?.getValue?.(
+          Cesium.JulianDate.now(),
+        );
+        if (record)
+          openRecord({ layerId: 'earthquakes', id: id.slice(11), record });
+      } else if (current?.layerId === 'earthquakes') {
+        close();
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+    return true;
+  }
+  if (!installQuakePick()) {
+    const retry = setInterval(() => {
+      if (installQuakePick() || signal?.aborted) clearInterval(retry);
+    }, 1000);
+    signal?.addEventListener('abort', () => clearInterval(retry));
+  }
+  signal?.addEventListener('abort', () => quakeHandler?.destroy());
 
   const on = (type, fn) =>
     globalThis.addEventListener(

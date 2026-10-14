@@ -11,6 +11,7 @@ import { createWeatherPanel } from './weatherPanel.js';
 import {
   groupLabel,
   layerLabel,
+  panelGroupsForPage,
   stateLabel as translateState,
 } from './ptBr.js';
 const FEED_STATE_LABELS = Object.freeze({
@@ -86,6 +87,44 @@ const PANEL_ORDER = PANEL_GROUPS.flatMap(({ label, ids }) =>
 const PANEL_POSITIONS = new Map(
   PANEL_ORDER.map(({ id }, index) => [id, index]),
 );
+/** barreto.top: the page-language grouping (pt-BR regroups the panel). */
+function pagePanelOrder() {
+  const groups = panelGroupsForPage();
+  if (!groups)
+    return {
+      order: PANEL_ORDER,
+      positions: PANEL_POSITIONS,
+      collapsible: new Set(),
+    };
+  const order = groups.flatMap(({ label, ids }) =>
+    ids.map((id) => ({ id, label })),
+  );
+  for (const entry of PANEL_ORDER)
+    if (!order.some((o) => o.id === entry.id)) order.push(entry);
+  return {
+    order,
+    positions: new Map(order.map(({ id }, index) => [id, index])),
+    collapsible: new Set(
+      groups.filter((g) => g.collapsible).map((g) => g.label),
+    ),
+  };
+}
+const COLLAPSE_KEY = 'barreto:panel-group-open:';
+const readGroupOpen = (label) => {
+  try {
+    return globalThis.localStorage?.getItem(COLLAPSE_KEY + label) === '1';
+  } catch {
+    return false;
+  }
+};
+const writeGroupOpen = (label, open) => {
+  try {
+    globalThis.localStorage?.setItem(COLLAPSE_KEY + label, open ? '1' : '0');
+  } catch {
+    /* private mode */
+  }
+};
+
 const PANEL_LABELS = {
   'ais-live-vessels': 'Live Vessels',
   bikeshare: 'Bike Share',
@@ -218,28 +257,61 @@ export class LayerPanel {
     this._toggleContainer.innerHTML = '';
 
     const generation = this._generation;
+    const { order, positions, collapsible } = pagePanelOrder();
     const layers = this.getAll()
       .slice()
       .sort(
         (a, b) =>
-          (PANEL_POSITIONS.get(a.id) ?? PANEL_ORDER.length) -
-          (PANEL_POSITIONS.get(b.id) ?? PANEL_ORDER.length),
+          (positions.get(a.id) ?? order.length) -
+          (positions.get(b.id) ?? order.length),
       );
     let previousGroup = '';
+    let groupRows = null;
     for (const layer of layers) {
       if (!layer.showInTogglePanel) continue;
-      const group =
-        PANEL_ORDER[PANEL_POSITIONS.get(layer.id)]?.label ?? 'Other layers';
+      const group = order[positions.get(layer.id)]?.label ?? 'Other layers';
       if (group && group !== previousGroup) {
         const heading = document.createElement('h3');
         heading.className = 'data-layer-group-heading';
-        heading.textContent = groupLabel(group);
+        groupRows = null;
+        if (collapsible.has(group)) {
+          // barreto.top: a folded group, opened by its heading.
+          const open = readGroupOpen(group);
+          const rows = [];
+          groupRows = rows;
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'data-layer-group-toggle';
+          button.setAttribute('aria-expanded', String(open));
+          const caret = document.createElement('span');
+          caret.className = 'material-symbols-outlined';
+          caret.setAttribute('aria-hidden', 'true');
+          caret.textContent = open ? 'expand_less' : 'expand_more';
+          const text = document.createElement('span');
+          text.textContent = groupLabel(group);
+          button.append(text, caret);
+          button.addEventListener('click', () => {
+            const next = button.getAttribute('aria-expanded') !== 'true';
+            button.setAttribute('aria-expanded', String(next));
+            caret.textContent = next ? 'expand_less' : 'expand_more';
+            for (const r of rows) r.hidden = !next;
+            writeGroupOpen(group, next);
+          });
+          heading.appendChild(button);
+          rows.open = open;
+        } else {
+          heading.textContent = groupLabel(group);
+        }
         this._toggleContainer.appendChild(heading);
       }
       previousGroup = group;
       const row = document.createElement('div');
       row.className = 'data-toggle-row';
       row.dataset.layerId = layer.id;
+      if (groupRows) {
+        groupRows.push(row);
+        row.hidden = !groupRows.open;
+      }
 
       const topRow = document.createElement('div');
       topRow.className = 'data-toggle-top';

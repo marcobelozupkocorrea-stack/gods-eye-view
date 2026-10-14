@@ -410,14 +410,18 @@ const LAYERS = [
     'Bicicletas compartilhadas',
     async () => {
       const url = encodeURIComponent(
-        'https://gbfs.lyft.com/gbfs/2.3/bkn/en/station_status.json',
+        'https://saopaulo.publicbikesystem.net/customer/gbfs/v2/pt/station_status.json',
       );
       const res = await get(`/api/gbfs/${url}`);
-      const n = json(res)?.data?.stations?.length;
-      return res.status === 200 && n
+      const stations = json(res)?.data?.stations || [];
+      const bikes = stations.reduce(
+        (sum, s) => sum + (Number(s.num_bikes_available) || 0),
+        0,
+      );
+      return res.status === 200 && stations.length
         ? [
-            'LIMITADO',
-            `funciona (Nova York: ${n} estações), mas só cidades dos EUA`,
+            'OK',
+            `Bike Itaú São Paulo: ${stations.length} estações, ${bikes} bicicletas livres agora (também Rio, Recife, Salvador, Porto Alegre, Brasília, Curitiba)`,
           ]
         : ['FALHA', `HTTP ${res.status}`];
     },
@@ -588,7 +592,39 @@ const LAYERS = [
     },
   ],
   ['Radar de chuva (EUA)', weatherCheck('radar', 'radar NOAA')],
-  ['Nuvens por satélite', weatherCheck('clouds-regional', 'GOES regional')],
+  ['Nuvens por satélite', weatherCheck('clouds-br', 'GOES-19 CPTEC/INPE')],
+  [
+    'Nuvens (GOES América do Norte)',
+    weatherCheck('clouds-regional', 'GOES regional'),
+  ],
+  [
+    'Radar de chuva (Brasil)',
+    async () => {
+      const manifest = json(await get('/api/brazil-radar/manifest'));
+      const radars = manifest?.radars;
+      if (!Array.isArray(radars))
+        return [
+          'FALHA',
+          `manifesto inválido (${JSON.stringify(manifest)?.slice(0, 120)})`,
+        ];
+      if (!radars.length)
+        return ['LIMITADO', 'nenhum radar transmitindo agora'];
+      const first = radars.find((r) => /saoroque/.test(r.id)) || radars[0];
+      const frame = await get(
+        `/api/brazil-radar/frame?id=${encodeURIComponent(first.id)}&stamp=${first.stamp}`,
+      );
+      const age = Math.round((Date.now() - Date.parse(first.time)) / 60_000);
+      return frame.status === 200
+        ? [
+            'OK',
+            `${radars.length} radares ao vivo (${radars
+              .slice(0, 6)
+              .map((r) => r.name)
+              .join(', ')}…); ${first.name}: imagem de há ${age} min`,
+          ]
+        : ['FALHA', `imagem HTTP ${frame.status}`];
+    },
+  ],
   ['Nuvens (mosaico global)', weatherCheck('clouds', 'mosaico global')],
   ['Raios', weatherCheck('lightning', 'densidade de raios')],
   [

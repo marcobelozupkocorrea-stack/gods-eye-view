@@ -4,10 +4,15 @@
  * welcome card. Replaces the upstream first-run launcher there.
  */
 import { initBrasilPanel } from './brasilPanel.js';
-import { installBrazilCities, translateChrome } from './chrome.js';
+import {
+  installBrazilCities,
+  installMobilePanelsToggle,
+  translateChrome,
+} from './chrome.js';
 import { installQuietCredits } from './credits.js';
 import { initDetailsSheet } from './details.js';
 import { initHelp } from './help.js';
+import { installLiveText } from './liveText.js';
 import { installSessionWatch } from './session.js';
 import { initWelcome } from './welcome.js';
 
@@ -20,9 +25,11 @@ export function initBarretoExperience({ styleManager, dataManager } = {}) {
     console.warn('[barreto] chrome labels:', error);
   }
   installBrazilCities({ styleManager, signal });
+  installLiveText({ signal });
+  installMobilePanelsToggle({ signal });
   installQuietCredits({ signal });
   installSessionWatch({ signal });
-  initDetailsSheet({ dataManager, signal });
+  initDetailsSheet({ dataManager, styleManager, signal });
   const help = initHelp({ signal });
   const brasilPanel = initBrasilPanel({ styleManager, dataManager, signal });
   initWelcome({ styleManager, dataManager, brasilPanel, help, signal });

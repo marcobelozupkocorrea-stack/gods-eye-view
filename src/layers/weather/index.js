@@ -48,14 +48,15 @@ export function createWeatherLayer({
   const radar = id === 'weather-radar';
   const lightning = id === 'weather-lightning';
   const satellite = !radar && !lightning;
-  // barreto.top (pt-BR): GOES regional stops north of Brazil; default to global.
+  // barreto.top (pt-BR): GOES regional stops north of Brazil; default to
+  // CPTEC/INPE's GOES-19 South America frames (10 min).
   const ptBr = /^pt\b/i.test(documentRef?.documentElement?.lang || '');
   let product = radar
     ? 'radar'
     : lightning
       ? 'lightning'
       : ptBr
-        ? 'clouds'
+        ? 'clouds-br'
         : 'clouds-regional';
   let opacity = 'strong';
   let infrared = 'filtered';
@@ -102,7 +103,12 @@ export function createWeatherLayer({
   const observationDelayed = () =>
     manifest?.latest &&
     Date.now() - Date.parse(manifest.latest) >
-      (product === 'clouds' ? 240 : lightning ? 45 : 20) * 60_000;
+      (product === 'clouds'
+        ? 240
+        : lightning || product === 'clouds-br'
+          ? 45
+          : 20) *
+        60_000;
   const stop = () => {
     if (clock) return;
     playing = false;
@@ -401,7 +407,7 @@ export function createWeatherLayer({
       }
       if (
         satellite &&
-        ['clouds', 'clouds-regional'].includes(params.product) &&
+        ['clouds', 'clouds-regional', 'clouds-br'].includes(params.product) &&
         params.product !== product
       ) {
         product = params.product;
@@ -557,7 +563,9 @@ export function createWeatherLayer({
               ? 'Americas + Pacific'
               : product === 'clouds'
                 ? 'Global · 60°S–60°N'
-                : 'North America',
+                : product === 'clouds-br'
+                  ? 'América do Sul'
+                  : 'North America',
           shownTime: time,
           maxGapMinutes: maxGap() / 60_000,
           detail: time
@@ -584,17 +592,20 @@ export function createWeatherLayer({
         chips: [
           ...(satellite
             ? [
+                ...(ptBr ? [['clouds-br', 'Brasil (10 min)']] : []),
                 ['clouds-regional', ptBr ? 'América do Norte' : 'N. America'],
-                ['clouds', ptBr ? 'Global (Brasil)' : 'Global'],
+                ['clouds', ptBr ? 'Global (1 h)' : 'Global'],
               ].map(([value, label]) => ({
                 id: value,
                 label,
                 active: product === value,
                 params: { product: value },
                 title:
-                  value === 'clouds'
-                    ? 'Hourly global mosaic; usually 2–3 hours delayed'
-                    : 'GOES regional clouds; approximately 5-minute updates',
+                  value === 'clouds-br'
+                    ? 'CPTEC/INPE · GOES-19 sobre a América do Sul, a cada 10 minutos'
+                    : value === 'clouds'
+                      ? 'Hourly global mosaic; usually 2–3 hours delayed'
+                      : 'GOES regional clouds; approximately 5-minute updates',
               }))
             : []),
           ...(satellite
@@ -646,7 +657,7 @@ export function createWeatherLayer({
             : [],
         info: hostHidden
           ? hostStatus
-          : `${radar ? 'RADAR REFLECTIVITY · dBZ' : lightning ? 'LIGHTNING DENSITY · 15 min accumulation' : product === 'clouds' ? 'GLOBAL INFRARED · hourly' : 'GOES INFRARED · ~5 min'}\n${time ? `${followLatest ? 'Latest observation' : 'History'}: ${utc(time)}\n${lag}${current && !followLatest ? ` · frame ${index + 1}/${times.length}` : ''}${loading ? ' · loading' : ''}` : `Observation: unavailable${loading ? ' · loading' : ''}`}${missing ? `\n${missing}` : ''}${manifest?.stale ? '\nSTALE · cached source metadata' : ''}${error || diagnostic?.error ? '\n' + (error || diagnostic.error) : ''}\n${radar ? 'Contiguous US · gaps ≠ no rain' : lightning ? 'Americas + Pacific · not individual strikes\nColor: strikes/km²/min ×10³' : product === 'clouds' ? '60°S–60°N · typically 2–3 h delayed' : 'North America · infrared imagery'}${outside ? '\nMap center is outside source coverage' : ''}${motion?.matches ? (clock ? '\nReduced motion · history playback unavailable' : '\nReduced motion · manual history available') : ''}`,
+          : `${radar ? 'RADAR REFLECTIVITY · dBZ' : lightning ? 'LIGHTNING DENSITY · 15 min accumulation' : product === 'clouds' ? 'GLOBAL INFRARED · hourly' : product === 'clouds-br' ? 'GOES-19 · CPTEC/INPE · 10 min' : 'GOES INFRARED · ~5 min'}\n${time ? `${followLatest ? 'Latest observation' : 'History'}: ${utc(time)}\n${lag}${current && !followLatest ? ` · frame ${index + 1}/${times.length}` : ''}${loading ? ' · loading' : ''}` : `Observation: unavailable${loading ? ' · loading' : ''}`}${missing ? `\n${missing}` : ''}${manifest?.stale ? '\nSTALE · cached source metadata' : ''}${error || diagnostic?.error ? '\n' + (error || diagnostic.error) : ''}\n${radar ? 'Contiguous US · gaps ≠ no rain' : lightning ? 'Americas + Pacific · not individual strikes\nColor: strikes/km²/min ×10³' : product === 'clouds' ? '60°S–60°N · typically 2–3 h delayed' : product === 'clouds-br' ? 'América do Sul · infravermelho realçado' : 'North America · infrared imagery'}${outside ? '\nMap center is outside source coverage' : ''}${motion?.matches ? (clock ? '\nReduced motion · history playback unavailable' : '\nReduced motion · manual history available') : ''}`,
         infoTitle: lightning
           ? 'NOAA/NWS 15-minute lightning density derived from Vaisala NLDN/GLD360. Coverage 110°E across the Pacific/Americas to 0°, 25°S–80°N. Not a live strike count, global coverage or a safety warning.'
           : radar
@@ -690,7 +701,7 @@ export function createWeatherLayer({
         loading,
         error: error || rendering?.getDiagnostics().error || null,
         stale: Boolean(manifest?.stale || observationDelayed()),
-        source: 'NOAA nowCOAST',
+        source: product === 'clouds-br' ? 'CPTEC/INPE' : 'NOAA nowCOAST',
         observedAt: shownTime(),
       };
     },

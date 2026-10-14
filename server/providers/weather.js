@@ -50,7 +50,53 @@ const PRODUCTS = Object.freeze({
       'GOES-19/18 longwave infrared Band 14 cloud and surface temperature patterns, approximately 2 km and 5-minute updates. Not a cloud-only mask.',
     image: Object.freeze({ width: 4096, height: 2048 }),
   }),
+  // barreto.top: CPTEC/INPE GOES-19 enhanced infrared over South America,
+  // every 10 minutes. CPTEC's capabilities document is ~800 KB, so the
+  // frame list comes from its small times endpoint and the extent is fixed.
+  // Requests go from the server only: CPTEC refuses foreign browser origins.
+  'clouds-br': Object.freeze({
+    wms: 'https://nowcasting.cptec.inpe.br/api/v1/geoserver/dissm/wms',
+    timesUrl:
+      'https://nowcasting.cptec.inpe.br/api/v1/paths/satelite/layers/goes19_web~ams_realcada_alta/times',
+    bounds: Object.freeze({
+      west: -100,
+      south: -56,
+      east: -25.25,
+      north: 12.5,
+    }),
+    layer: 'DISSM_Nowcasting_S11161222',
+    style: '',
+    title: 'GOES-19 infravermelho realçado · América do Sul',
+    coverage: 'América do Sul e oceanos vizinhos (100°W–25°W, 56°S–12°N).',
+    description:
+      'Satélite GOES-19, canal infravermelho realçado do CPTEC/INPE, a cada 10 minutos. Cores frias (azul, roxo) indicam topos de nuvens altos — tempestades.',
+    source: 'CPTEC/INPE',
+    attribution: 'CPTEC/INPE · GOES-19 (NOAA)',
+    metadataTtlMs: 120_000,
+    image: Object.freeze({ width: 2048, height: 1024 }),
+  }),
 });
+
+/** CPTEC's `{ times: [...] }` frame list as the capabilities parser's result. */
+export function parseWeatherTimes(json, product, nowMs = Date.now()) {
+  const spec = PRODUCTS[product];
+  const raw = json?.times;
+  if (!spec?.bounds || !Array.isArray(raw) || !raw.length || raw.length > 2048)
+    throw failure('invalid_weather_metadata');
+  const times = raw.map((value) => observationTime(value));
+  if (times.some((value) => !value || Date.parse(value) > nowMs + 5 * 60_000))
+    throw failure('invalid_weather_metadata');
+  const recent = [...new Set(times)]
+    .filter((value) => nowMs - Date.parse(value) <= 24 * HOUR)
+    .sort()
+    .slice(-26);
+  if (!recent.length) throw failure('weather_observations_expired');
+  return {
+    bounds: { ...spec.bounds },
+    times: recent.slice(-13),
+    allowedTimes: recent,
+  };
+}
 
 // Whole-extent images: 2:1 sizes up to each product's largest (the default).
 const IMAGE_SIZES = Object.freeze(['1024x512', '2048x1024', '4096x2048']);
@@ -310,12 +356,14 @@ export function weatherProxy({
       if (!clientSignal.aborted) operation.waiters--;
     }
   }
-  async function upstream(url, signal, image = null) {
+  async function upstream(url, signal, image = null, accept = null) {
     signal.throwIfAborted();
     const response = await fetchImpl(url, {
       signal,
       redirect: 'error',
-      headers: { Accept: image ? 'image/png' : 'application/xml,text/xml' },
+      headers: {
+        Accept: image ? 'image/png' : (accept ?? 'application/xml,text/xml'),
+      },
     });
     if (
       !response.ok ||
@@ -344,20 +392,35 @@ export function weatherProxy({
     try {
       if (
         now() - (attempts.get(product) ?? -Infinity) < 30_000 &&
-        !operations.has(`metadata:${spec.service}`)
+        !operations.has(`metadata:${spec.timesUrl ?? spec.service}`)
       )
         throw failure('weather_upstream_unavailable');
       attempts.set(product, now());
-      const url = `${BASE}${spec.service}/ows?service=WMS&version=1.3.0&request=GetCapabilities`;
-      const xml = await shared(
-        `metadata:${spec.service}`,
-        (activeSignal) => upstream(url, activeSignal),
+      const url =
+        spec.timesUrl ??
+        `${BASE}${spec.service}/ows?service=WMS&version=1.3.0&request=GetCapabilities`;
+      const text = await shared(
+        `metadata:${spec.timesUrl ?? spec.service}`,
+        (activeSignal) =>
+          upstream(
+            url,
+            activeSignal,
+            null,
+            spec.timesUrl ? 'application/json' : null,
+          ),
         signal,
       );
-      const value = {
-        ...parseWeatherCapabilities(xml, product, now()),
-        fetchedAt: now(),
-      };
+      let parsed;
+      if (spec.timesUrl) {
+        let json;
+        try {
+          json = JSON.parse(text);
+        } catch {
+          throw failure('invalid_weather_metadata');
+        }
+        parsed = parseWeatherTimes(json, product, now());
+      } else parsed = parseWeatherCapabilities(text, product, now());
+      const value = { ...parsed, fetchedAt: now() };
       metadata.set(product, value);
       return { ...value, stale: false };
     } catch (error) {
@@ -388,7 +451,7 @@ export function weatherProxy({
       title: spec.title,
       coverage: spec.coverage,
       description: spec.description,
-      source: 'NOAA nowCOAST',
+      source: spec.source ?? 'NOAA nowCOAST',
       attribution: spec.attribution ?? 'NOAA/NWS/NESDIS nowCOAST',
       bounds: value?.bounds ?? null,
       times: value?.times ?? [],
@@ -543,7 +606,7 @@ export function weatherProxy({
         if (now() - (tileFailures.get(key) ?? -Infinity) < 30_000)
           throw failure('weather_upstream_unavailable');
         const spec = PRODUCTS[product];
-        const upstreamUrl = new URL(`${BASE}${spec.service}/ows`);
+        const upstreamUrl = new URL(spec.wms ?? `${BASE}${spec.service}/ows`);
         upstreamUrl.search = new URLSearchParams({
           service: 'WMS',
           version: '1.1.1',

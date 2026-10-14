@@ -23,7 +23,78 @@ function bcycleEntry({
     ...buildBcycleUrls(systemId),
   };
 }
+function bikeItauEntry({ id, city, centerLat, centerLon, host, loadRadiusKm }) {
+  const base = `https://${host}.publicbikesystem.net/customer/gbfs/v2/pt`;
+  return {
+    id,
+    city,
+    centerLat,
+    centerLon,
+    loadRadiusKm,
+    stationInformationUrl: `${base}/station_information.json`,
+    stationStatusUrl: `${base}/station_status.json`,
+    provider: 'Bike Itaú (Tembici)',
+  };
+}
 const RAW_GBFS_CITY_REGISTRY = [
+  // barreto.top: Bike Itaú (Tembici) — public GBFS, no key.
+  bikeItauEntry({
+    id: 'sao-paulo-bike-itau',
+    city: 'São Paulo, SP',
+    centerLat: -23.577,
+    centerLon: -46.674,
+    host: 'saopaulo',
+    loadRadiusKm: 60,
+  }),
+  bikeItauEntry({
+    id: 'rio-bike-itau',
+    city: 'Rio de Janeiro, RJ',
+    centerLat: -22.947,
+    centerLon: -43.217,
+    host: 'riodejaneiro',
+    loadRadiusKm: 60,
+  }),
+  bikeItauEntry({
+    id: 'recife-bike-itau',
+    city: 'Recife, PE',
+    centerLat: -8.06,
+    centerLon: -34.893,
+    host: 'recife',
+    loadRadiusKm: 50,
+  }),
+  bikeItauEntry({
+    id: 'salvador-bike-itau',
+    city: 'Salvador, BA',
+    centerLat: -12.992,
+    centerLon: -38.473,
+    host: 'salvador',
+    loadRadiusKm: 50,
+  }),
+  bikeItauEntry({
+    id: 'porto-alegre-bike-itau',
+    city: 'Porto Alegre, RS',
+    centerLat: -30.044,
+    centerLon: -51.216,
+    host: 'portoalegre',
+    loadRadiusKm: 50,
+  }),
+  bikeItauEntry({
+    id: 'brasilia-bike-itau',
+    city: 'Brasília, DF',
+    centerLat: -15.787,
+    centerLon: -47.888,
+    host: 'brasilia',
+    loadRadiusKm: 50,
+  }),
+  bikeItauEntry({
+    id: 'curitiba-bike-itau',
+    city: 'Curitiba, PR',
+    centerLat: -25.434,
+    centerLon: -49.277,
+    host: 'curitiba',
+    loadRadiusKm: 50,
+  }),
+
   {
     id: 'nyc-citibike',
     city: 'New York, NY',

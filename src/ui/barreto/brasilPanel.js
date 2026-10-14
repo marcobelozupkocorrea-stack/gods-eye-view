@@ -96,6 +96,25 @@ export function initBrasilPanel({ styleManager, dataManager, signal } = {}) {
 
   const isOpen = () => !panel.classList.contains('collapsed');
 
+  // Alert count on the panel header, visible even while it is closed.
+  const badge = document.createElement('span');
+  badge.className = 'brasil-badge';
+  badge.hidden = true;
+  panel.querySelector('.panel-title')?.after(badge);
+  function updateBadge(all) {
+    const selected = all.filter((item) => state.sources.has(item.source));
+    const loaded = [...state.sources].some((key) => state.rows[key]);
+    if (!loaded) {
+      badge.hidden = true;
+      return;
+    }
+    const max = selected.filter((item) => item.severity >= 3).length;
+    badge.hidden = false;
+    badge.textContent = selected.length.toLocaleString('pt-BR');
+    badge.classList.toggle('hot', max > 0);
+    badge.title = `${selected.length} alertas ativos${max ? `, ${max} no nível máximo` : ''}`;
+  }
+
   async function load(sourceKey, { force = false } = {}) {
     const meta = BRASIL_SOURCES[sourceKey];
     if (!meta || state.loading.has(sourceKey)) return;
@@ -138,6 +157,7 @@ export function initBrasilPanel({ styleManager, dataManager, signal } = {}) {
       deter: state.rows.deter,
     });
     const counts = countBySource(all);
+    updateBadge(all);
     chips.replaceChildren(
       ...Object.entries(BRASIL_SOURCES).map(([key, meta]) => {
         const on = state.sources.has(key);
@@ -319,9 +339,13 @@ export function initBrasilPanel({ styleManager, dataManager, signal } = {}) {
     if (isOpen()) void loadSelected();
   });
   observer.observe(panel, { attributes: true, attributeFilter: ['class'] });
-  const timer = setInterval(() => {
-    if (isOpen()) void loadSelected({ force: true });
-  }, REFRESH_MS);
+  // Refresh in the background too, so the header count stays current.
+  const timer = setInterval(
+    () => void loadSelected({ force: true }),
+    REFRESH_MS,
+  );
+  const firstLoad = setTimeout(() => void loadSelected(), 4000);
+  signal?.addEventListener('abort', () => clearTimeout(firstLoad));
   signal?.addEventListener('abort', () => {
     observer.disconnect();
     clearInterval(timer);

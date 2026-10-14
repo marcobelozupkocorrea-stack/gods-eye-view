@@ -1,5 +1,5 @@
 import { readResponseBytesCapped } from '../../sources/httpBody.js';
-import { weatherImageUrl } from './source.js';
+import { isInfraredProduct, weatherImageUrl } from './source.js';
 import { infraredAlpha } from './infraredAlpha.js';
 
 export const MAX_MOSAIC_BYTES = 4 * 1024 * 1024;
@@ -93,7 +93,7 @@ export async function acquireWeatherImage(
     if (image.width !== size.width || image.height !== size.height)
       throw new Error('Invalid weather image dimensions');
     let texture;
-    if (product === 'clouds' || product === 'clouds-regional')
+    if (isInfraredProduct(product))
       texture = processInfraredImage(image, mode, createCanvas);
     else {
       texture = createCanvas();
@@ -107,11 +107,18 @@ export async function acquireWeatherImage(
   }
 }
 
-/** Acquire one capped global mosaic before adding any imagery layer. */
-export function acquireInfraredMosaic(time, options) {
-  return acquireWeatherImage('clouds', time, {
+/** Acquire one capped global mosaic before adding any imagery layer.
+ * barreto.top: CPTEC's South America frame ('clouds-br') also arrives whole —
+ * its WMS renders one image faster than dozens of tiles — so it allows more
+ * bytes (its colour-enhanced PNG is larger). */
+export function acquireInfraredMosaic(time, options, product = 'clouds') {
+  return acquireWeatherImage(product, time, {
     ...options,
     size: { width: 2048, height: 1024 },
-    maxBytes: MAX_MOSAIC_BYTES,
+    maxBytes: product === 'clouds-br' ? 3 * MAX_MOSAIC_BYTES : MAX_MOSAIC_BYTES,
   });
 }
+
+/** Products shown from one whole image sliced locally rather than WMS tiles. */
+export const isMosaicProduct = (product) =>
+  product === 'clouds' || product === 'clouds-br';

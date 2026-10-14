@@ -49,6 +49,15 @@ const SECTIONS = [
     ],
   },
   {
+    icon: 'rainy',
+    title: 'Chuva e tempo agora',
+    items: [
+      '<b>Radar de chuva (Brasil)</b>: imagens dos radares do CPTEC/INPE, Cemaden, DECEA e SIPAM, a cada 5–10 min. Cores: azul/verde = chuva fraca, amarelo/vermelho = forte. Onde não há radar, o mapa fica vazio — isso não quer dizer que não chove.',
+      '<b>Nuvens por satélite</b>: GOES-19 do CPTEC/INPE sobre a América do Sul a cada 10 min. Azul e roxo = topos de nuvem muito frios (tempestades). Em <b>TEMPO</b> dá para escolher <i>Só nuvens</i> ou <i>Completa</i> e ver as últimas 2 horas com <i>Animar</i>.',
+      '<b>Bicicletas compartilhadas</b>: estações da Bike Itaú (SP, Rio, Recife, Salvador, Porto Alegre, Brasília, Curitiba) com bicicletas livres agora.',
+    ],
+  },
+  {
     icon: 'videocam',
     title: 'Câmeras ao vivo',
     items: [
@@ -69,6 +78,16 @@ const SECTIONS = [
     title: 'Compartilhar o que você está vendo',
     items: [
       'O botão <span class="ms">link</span> copia um link com a posição e as camadas ligadas. Quem abrir (com login) vê a mesma coisa.',
+    ],
+  },
+  {
+    icon: 'install_mobile',
+    title: 'Instalar como aplicativo',
+    items: [
+      '<b>Android (Chrome):</b> menu <b>⋮</b> → <b>Instalar app</b> (ou "Adicionar à tela inicial").',
+      '<b>iPhone (Safari):</b> botão <b>Compartilhar</b> → <b>Adicionar à Tela de Início</b>.',
+      '<b>Computador (Chrome/Edge):</b> ícone de instalar na barra de endereço.',
+      'O app abre em tela cheia, direto no mapa, com o mesmo login.',
     ],
   },
   {
@@ -104,9 +123,43 @@ export function initHelp({ signal } = {}) {
           </section>`,
         ).join('')}
       </div>
+      <div class="barreto-help-install" hidden>
+        <button type="button"><span class="material-symbols-outlined" aria-hidden="true">install_mobile</span> Instalar o app neste aparelho</button>
+      </div>
       <footer>Fontes: INMET, Defesa Civil (IDAP), Cemaden, INPE (DETER e Queimadas), NASA FIRMS, DER-SP, CET-SP e as fontes originais do God's Eye View.</footer>
     </div>`;
   document.body.append(dialog);
+
+  // Offer a one-tap install where the browser supports it (Chrome/Edge/Android).
+  let installPrompt = null;
+  const installBox = dialog.querySelector('.barreto-help-install');
+  globalThis.addEventListener?.(
+    'beforeinstallprompt',
+    (event) => {
+      event.preventDefault();
+      installPrompt = event;
+      installBox.hidden = false;
+    },
+    { signal },
+  );
+  globalThis.addEventListener?.(
+    'appinstalled',
+    () => {
+      installPrompt = null;
+      installBox.hidden = true;
+    },
+    { signal },
+  );
+  installBox.querySelector('button').addEventListener('click', async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    try {
+      await installPrompt.userChoice;
+    } finally {
+      installPrompt = null;
+      installBox.hidden = true;
+    }
+  });
 
   let lastFocus = null;
   const open = () => {

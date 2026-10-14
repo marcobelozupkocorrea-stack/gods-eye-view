@@ -85,6 +85,7 @@ export function createEarthquakesLayer({ source, overlayHost } = {}) {
           mag,
           place,
           time,
+          extra,
         } of rows) {
           count++;
           const baseRadius = Math.pow(2, mag) * 1000;
@@ -118,6 +119,17 @@ export function createEarthquakesLayer({ source, overlayHost } = {}) {
                 place,
                 time,
                 depth: depthKm,
+                // barreto.top: read by the pt-BR detail sheet.
+                barreto: {
+                  stableId,
+                  lat,
+                  lon,
+                  depthKm,
+                  mag,
+                  place,
+                  time,
+                  ...(extra || {}),
+                },
               },
             }),
           );

@@ -6,7 +6,7 @@ import reservationRows from './layerStateTokenReservations.json' with { type: 'j
 // shareRestoration.js; links keep their historical meaning via absentValue.
 let cloudsProductDefault = 'clouds-regional';
 export function setCloudsProductDefault(value) {
-  if (value === 'clouds' || value === 'clouds-regional')
+  if (['clouds', 'clouds-regional', 'clouds-br'].includes(value))
     cloudsProductDefault = value;
 }
 function withDynamicDefault(spec, read) {
@@ -345,8 +345,8 @@ const OPTION_GROUPS = Object.freeze({
         'product',
         'p',
         'clouds-regional',
-        ['clouds', 'clouds-regional'],
-        { clouds: 'g', 'clouds-regional': 'r' },
+        ['clouds', 'clouds-regional', 'clouds-br'],
+        { clouds: 'g', 'clouds-regional': 'r', 'clouds-br': 'b' },
         { absentValue: 'clouds-regional' },
       ),
       () => cloudsProductDefault,
@@ -607,6 +607,12 @@ export const LAYER_STATE_REGISTRY = Object.freeze([
     disposition: 'enabled-only',
   }),
   Object.freeze({ id: 'bikeshare', token: 'b', disposition: 'enabled-only' }),
+  Object.freeze({
+    // barreto.top fork-specific token (see inmet-alerts).
+    id: 'brazil-radar',
+    token: 'zf',
+    disposition: 'enabled-only',
+  }),
   Object.freeze({
     id: 'cctv',
     token: 'c',

@@ -16,7 +16,7 @@ export const CHROME_TEXT = Object.freeze({
   'RECENT IMAGERY': 'IMAGENS RECENTES',
   CONTEXT: 'CONTEXTO',
   RADIO: 'RÁDIO',
-  'VISUAL PRESETS': 'ESTILOS VISUAIS',
+  'VISUAL PRESETS': 'ESTILOS',
   'MAP SOURCE': 'FONTE DO MAPA',
   LOCATION: 'LOCAL',
 });
@@ -75,6 +75,16 @@ export function translateChrome() {
     node.title = title;
     node.setAttribute('aria-label', aria);
   }
+  // barreto.top branding: the product name the team uses. The original
+  // project is credited in the "Como usar" guide.
+  const titleText = document.querySelector('#title-bar h1 > span:last-child');
+  if (titleText)
+    titleText.innerHTML = 'BARRETO <span class="title-accent">·</span>';
+  const subtitle = document.querySelector('#title-bar .subtitle');
+  if (subtitle) subtitle.textContent = 'MONITORAMENTO EM TEMPO REAL';
+  const loaderTitle = document.querySelector('#loading-screen h2');
+  if (loaderTitle) loaderTitle.textContent = 'BARRETO';
+  document.title = 'Barreto · Monitoramento';
   const search = document.getElementById('location-search');
   if (search) {
     search.placeholder = 'Buscar cidade, endereço ou coordenada…';
@@ -119,4 +129,33 @@ export function installBrazilCities({ styleManager, signal } = {}) {
   else popover.prepend(row);
   signal?.addEventListener('abort', () => row.remove());
   return row;
+}
+
+/**
+ * Phones: the closed side panels (CENAS, EXIBIÇÃO, CÂMERAS, NÍVEL DA RUA,
+ * CONTEXTO…) covered most of the map. Hide the closed ones behind a "Mais
+ * painéis" button in the top bar; open panels always stay visible.
+ */
+export function installMobilePanelsToggle({ signal } = {}) {
+  const nav = document.getElementById('top-center-actions');
+  if (!nav || document.getElementById('barreto-more-panels')) return null;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.id = 'barreto-more-panels';
+  button.title = 'Mostrar mais painéis';
+  button.setAttribute('aria-label', 'Mostrar mais painéis');
+  button.setAttribute('aria-pressed', 'false');
+  button.innerHTML =
+    '<span class="material-symbols-outlined" aria-hidden="true">more_horiz</span>';
+  button.addEventListener('click', () => {
+    const on = document.body.classList.toggle('barreto-more-panels');
+    button.setAttribute('aria-pressed', String(on));
+    button.title = on ? 'Esconder painéis extras' : 'Mostrar mais painéis';
+  });
+  nav.append(button);
+  signal?.addEventListener('abort', () => {
+    button.remove();
+    document.body.classList.remove('barreto-more-panels');
+  });
+  return button;
 }

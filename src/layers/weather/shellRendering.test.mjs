@@ -125,6 +125,7 @@ test('shell heights stack every product with lightning highest', () => {
     wind: 5_000,
     clouds: 5_500,
     'clouds-regional': 5_800,
+    'clouds-br': 5_800,
     radar: 6_200,
     lightning: 6_600,
   });

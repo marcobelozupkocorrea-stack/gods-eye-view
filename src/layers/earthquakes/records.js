@@ -1,3 +1,26 @@
+const num = (v) => (Number.isFinite(v) ? v : null);
+const str = (v) => (typeof v === 'string' && v.trim() ? v.trim() : null);
+
+/** USGS properties worth showing beyond magnitude/place/time. */
+export function earthquakeExtras(p) {
+  return {
+    magType: str(p.magType),
+    title: str(p.title),
+    url: str(p.url),
+    felt: num(p.felt),
+    cdi: num(p.cdi),
+    mmi: num(p.mmi),
+    alert: str(p.alert),
+    tsunami: p.tsunami === 1,
+    sig: num(p.sig),
+    status: str(p.status),
+    network: str(p.net),
+    updated: num(p.updated),
+    stations: num(p.nst),
+    gapDeg: num(p.gap),
+  };
+}
+
 /** Validate a complete feed before replacing the last good earthquake snapshot. */
 export function normalizeEarthquakeSnapshot(geojson) {
   if (!Array.isArray(geojson?.features)) return null;
@@ -43,6 +66,8 @@ export function normalizeEarthquakeSnapshot(geojson) {
       mag,
       place: typeof properties.place === 'string' ? properties.place : null,
       time: Number.isFinite(properties.time) ? properties.time : null,
+      // barreto.top: extra USGS fields for the pt-BR detail sheet.
+      extra: earthquakeExtras(properties),
     });
   }
   return rows;

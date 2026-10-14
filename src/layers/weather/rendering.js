@@ -6,10 +6,14 @@ import { createWeatherShell } from './shellRendering.js';
 import { readResponseBytesCapped } from '../../sources/httpBody.js';
 import {
   acquireInfraredMosaic,
+  isMosaicProduct,
   processInfraredImage,
 } from './infraredImage.js';
 // Bounded display detail for the hourly, approximately 3 km global product.
 const GLOBAL_TILE_MAXIMUM_LEVEL = 3;
+// barreto.top: the 2048 px South America frame spans ~75°; level 5 slices it
+// at about its native detail.
+const REGIONAL_MOSAIC_MAXIMUM_LEVEL = 5;
 // Six decoded 2048×1024 canvases (8 MiB each) bound the cache below 50 MiB.
 const MAX_MOSAICS = 6;
 const MAX_PREFETCH_TILES = 8;
@@ -40,7 +44,12 @@ function createGlobeRendering({
   function profile(product) {
     return {
       tileSize: 256,
-      maximumLevel: product === 'clouds' ? GLOBAL_TILE_MAXIMUM_LEVEL : 6,
+      maximumLevel:
+        product === 'clouds'
+          ? GLOBAL_TILE_MAXIMUM_LEVEL
+          : product === 'clouds-br'
+            ? REGIONAL_MOSAIC_MAXIMUM_LEVEL
+            : 6,
     };
   }
 
@@ -51,24 +60,28 @@ function createGlobeRendering({
     prefetchedKey = null;
   }
 
-  async function mosaic(time, mode, signal, onFetched) {
+  async function mosaic(time, mode, signal, onFetched, product = 'clouds') {
     signal.throwIfAborted();
-    const key = `${time}|${mode}`;
+    const key = `${product}|${time}|${mode}`;
     const texture = mosaics.get(key);
     if (texture) {
       mosaics.delete(key);
       mosaics.set(key, texture);
       return { texture, decodeMs: 0, cached: true };
     }
-    const result = await acquireInfraredMosaic(time, {
-      signal,
-      mode,
-      createCanvas,
-      fetchImpl,
-      decodeImage,
-      now,
-      onFetched,
-    });
+    const result = await acquireInfraredMosaic(
+      time,
+      {
+        signal,
+        mode,
+        createCanvas,
+        fetchImpl,
+        decodeImage,
+        now,
+        onFetched,
+      },
+      product,
+    );
     // An aborted decode may still finish; never repopulate a cleared instance.
     signal.throwIfAborted();
     mosaics.delete(key);
@@ -186,16 +199,19 @@ function createGlobeRendering({
           !snapshot.times.includes(time)
         )
           return false;
-        const global = snapshot.product === 'clouds';
+        const global = isMosaicProduct(snapshot.product);
         const urls = global ? [] : prefetchTiles(snapshot, time);
-        const key = global ? `${time}|${infrared}` : urls.join('|');
+        const key = global
+          ? `${snapshot.product}|${time}|${infrared}`
+          : urls.join('|');
         if (prefetchJob?.key === key || prefetchedKey === key) return false;
         cancelPrefetch();
         job = { key, controller: new AbortController() };
         prefetchJob = job;
         const { signal } = job.controller;
         job.timeout = setTimeout(() => job.controller.abort(), timeoutMs);
-        if (global) await mosaic(time, infrared, signal);
+        if (global)
+          await mosaic(time, infrared, signal, undefined, snapshot.product);
         else
           await Promise.all(
             urls.map(async (url) => {
@@ -234,7 +250,7 @@ function createGlobeRendering({
       lastError = null;
       const { west, south, east, north } = snapshot.bounds;
       const rectangle = cesium.Rectangle.fromDegrees(west, south, east, north);
-      const global = snapshot.product === 'clouds';
+      const global = isMosaicProduct(snapshot.product);
       const frame = {
         snapshot,
         time,
@@ -338,7 +354,9 @@ function createGlobeRendering({
             ? 'NOAA/NWS lightning density · derived from Vaisala NLDN/GLD360'
             : snapshot.product === 'radar'
               ? 'NOAA nowCOAST · NWS/OAR MRMS'
-              : 'NOAA nowCOAST · NESDIS GOES / global satellite partners',
+              : snapshot.product === 'clouds-br'
+                ? 'CPTEC/INPE · GOES-19'
+                : 'NOAA nowCOAST · NESDIS GOES / global satellite partners',
           false,
         );
         const provider = global
@@ -347,7 +365,7 @@ function createGlobeRendering({
               texture,
               rectangle,
               tilingScheme,
-              maximumLevel: GLOBAL_TILE_MAXIMUM_LEVEL,
+              maximumLevel: nextProfile.maximumLevel,
               tileSize: nextProfile.tileSize,
               credit,
               createCanvas,
@@ -383,7 +401,11 @@ function createGlobeRendering({
             .then((image) => {
               // Cesium decodes tiles as ImageBitmaps already flipped, since WebGL
               // ignores UNPACK_FLIP_Y for them; a canvas upload flips again.
-              if (!frame.closed && snapshot.product === 'clouds-regional')
+              if (
+                !frame.closed &&
+                (snapshot.product === 'clouds-regional' ||
+                  snapshot.product === 'clouds-br')
+              )
                 image = processInfraredImage(image, infrared, createCanvas, {
                   flipY:
                     typeof ImageBitmap !== 'undefined' &&
@@ -453,9 +475,15 @@ function createGlobeRendering({
         onChange();
       };
       if (global) {
-        void mosaic(time, infrared, frame.controller.signal, () => {
-          frame.mosaic.fetched = true;
-        })
+        void mosaic(
+          time,
+          infrared,
+          frame.controller.signal,
+          () => {
+            frame.mosaic.fetched = true;
+          },
+          snapshot.product,
+        )
           .then(({ texture, decodeMs, cached }) => {
             frame.mosaic.decodeMs = decodeMs;
             frame.mosaic.cached = cached;

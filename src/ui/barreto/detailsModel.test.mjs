@@ -196,3 +196,43 @@ test('satellite, fire and alert sheets keep only filled rows', () => {
   assert.equal(rows(deter, 'Alerta').Área, '1,5 km² (150 ha)');
   assert.equal(fmtCoords(-23.5, -46.6), '23.5000° S, 46.6000° O');
 });
+
+test('earthquake sheet in Portuguese', async () => {
+  const { earthquakeSheet, placePt, magnitudeWord } =
+    await import('./detailsModel.js');
+  assert.equal(placePt('15 km NW of Lima, Peru'), '15 km a NO de Lima, Peru');
+  assert.equal(placePt('Fiji region'), 'Fiji region');
+  assert.equal(magnitudeWord(5.4), 'Forte');
+  const q = earthquakeSheet({
+    stableId: 'us7000x',
+    mag: 6.1,
+    magType: 'mww',
+    place: '30 km SE of Arica, Chile',
+    depthKm: 95,
+    tsunami: true,
+    alert: 'yellow',
+    felt: 120,
+    status: 'reviewed',
+    url: 'https://earthquake.usgs.gov/earthquakes/eventpage/us7000x',
+  });
+  assert.equal(q.title, 'Magnitude 6,1 mww');
+  assert.equal(q.subtitle, '30 km a SL de Arica, Chile');
+  assert.match(q.alert, /tsunami/);
+  assert.equal(rows(q, 'Evento').Profundidade, '95 km (intermediária)');
+  assert.equal(rows(q, 'Impacto')['Alerta PAGER'], 'Amarelo (impacto local)');
+  assert.equal(rows(q, 'Dados').Situação, 'Revisado por sismólogo');
+  assert.equal(q.accent, '#ff9800');
+});
+
+test('pt-BR panel groups put Brazilian alerts first and fold outside-Brazil layers', async () => {
+  const { panelGroupsForPage, BRAZIL_PANEL_GROUPS } =
+    await import('../ptBr.js');
+  assert.equal(panelGroupsForPage({ documentElement: { lang: 'en' } }), null);
+  const groups = panelGroupsForPage({ documentElement: { lang: 'pt-BR' } });
+  assert.equal(groups[0].label, 'Brazil alerts');
+  const outside = groups.at(-1);
+  assert.equal(outside.collapsible, true);
+  assert.ok(outside.ids.includes('weather-radar'));
+  const all = BRAZIL_PANEL_GROUPS.flatMap((g) => g.ids);
+  assert.equal(new Set(all).size, all.length, 'no layer listed twice');
+});

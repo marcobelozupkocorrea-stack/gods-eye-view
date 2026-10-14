@@ -903,3 +903,166 @@ html[lang^='pt'] #location-bar-divider {
     max-height: 160px;
   }
 }
+
+/* ---------- CAMADAS: folded "Só fora do Brasil" group ---------- */
+.data-layer-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.data-layer-group-toggle .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.barreto-help-install {
+  padding: 0 16px 10px;
+}
+
+.barreto-help-install[hidden] {
+  display: none;
+}
+
+.barreto-help-install button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  justify-content: center;
+  padding: 10px;
+  color: #001018;
+  font: 700 13px var(--font-sans);
+  background: var(--accent);
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* ---------- Cleaner screen (pt-BR) ----------
+   The decorative "spy satellite" HUD text (classification banners, orbit
+   numbers, sensor codes) means nothing for monitoring and covers the map.
+   Keep only the map-centre coordinates. Voice needs an OpenAI key that this
+   install does not use, so its dock button is hidden too. */
+html[lang^='pt'] #intel-hud .hud-top-bar,
+html[lang^='pt'] #intel-hud .hud-top-left,
+html[lang^='pt'] #intel-hud .hud-top-right,
+html[lang^='pt'] #intel-hud .hud-edge,
+html[lang^='pt'] #intel-hud .hud-bottom-bar,
+html[lang^='pt'] #intel-hud .hud-bottom-right,
+html[lang^='pt'] #intel-hud #hud-mgrs,
+html[lang^='pt'] #intel-hud .hud-bracket,
+html[lang^='pt'] #gev-voice-control {
+  display: none !important;
+}
+
+html[lang^='pt'] #intel-hud #hud-latlon {
+  color: var(--text-secondary);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+/* Collapsed panel titles were barely readable (dim grey on dark glass). */
+html[lang^='pt'] .panel-collapsible.collapsed .panel-title,
+html[lang^='pt'] .pp-header-label,
+html[lang^='pt'] #pp-toggles .pp-header-label {
+  color: var(--text-primary);
+  opacity: 0.85;
+}
+
+html[lang^='pt'] .data-toggle-row .data-toggle-meta {
+  color: var(--text-secondary);
+}
+
+.brasil-badge {
+  flex: 0 0 auto;
+  margin-left: 8px;
+  padding: 1px 7px;
+  color: #001018;
+  font: 700 10px var(--font-mono);
+  letter-spacing: 0;
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.brasil-badge[hidden] {
+  display: none;
+}
+
+.brasil-badge.hot {
+  color: #fff;
+  background: #d50000;
+  box-shadow: 0 0 10px rgba(255, 60, 60, 0.6);
+}
+
+/* ---------- Phones: fewer bars over the map ---------- */
+#barreto-more-panels {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  html[lang^='pt'] #barreto-more-panels {
+    display: grid;
+  }
+
+  html[lang^='pt'] #barreto-more-panels[aria-pressed='true'] {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  html[lang^='pt']
+    body:not(.barreto-more-panels)
+    #left-panel-stack
+    > #scene-panel.collapsed,
+  html[lang^='pt']
+    body:not(.barreto-more-panels)
+    #right-context-rail
+    > .collapsed:not(.panel-floating) {
+    display: none !important;
+  }
+}
+
+/* With the voice button gone, the dock's two trays can show their labels. */
+@media (max-width: 900px) {
+  html[lang^='pt'] #command-dock {
+    --dock-side-compact: 8.75rem;
+  }
+}
+
+/* Phones: upstream squeezes the tray labels to 2.3rem ("LO…"); here the
+   trays are wide enough for the whole short Portuguese word. */
+@media (max-width: 620px) {
+  html[lang^='pt'] #command-dock {
+    --dock-side-compact: 8.25rem;
+  }
+
+  html[lang^='pt'] #command-dock .panel-title,
+  html[lang^='pt'] #command-dock .location-toolbar-label {
+    max-width: none;
+    overflow: visible;
+    letter-spacing: 0.1rem;
+  }
+}
+
+#brasil-panel .panel-header:has(.brasil-badge:not([hidden])) .panel-divider {
+  min-width: 0;
+}
+
+#brasil-panel.collapsed
+  .panel-header:has(.brasil-badge:not([hidden]))
+  .panel-divider {
+  display: none;
+}
+
+#brasil-panel.collapsed .brasil-badge {
+  margin-right: 8px;
+  margin-left: auto;
+}

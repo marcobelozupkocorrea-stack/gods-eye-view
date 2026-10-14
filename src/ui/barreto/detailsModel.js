@@ -809,3 +809,98 @@ export function deterSheet(row = {}) {
     note: 'Fonte: INPE DETER. Alertas indicam mudança na cobertura florestal vista por satélite.',
   });
 }
+
+// ---------------------------------------------------------------- earthquakes
+
+const DIR_PT = (d) => d.replace(/W/g, 'O').replace(/E/g, 'L');
+
+/** "15 km NE of Lima, Peru" → "15 km a NL de Lima, Peru". */
+export function placePt(place) {
+  const s = String(place || '').trim();
+  const m = /^(\d+(?:\.\d+)?)\s*km\s+([NSEW]{1,3})\s+of\s+(.+)$/i.exec(s);
+  return m
+    ? `${m[1]} km a ${DIR_PT(m[2].toUpperCase())} de ${m[3]}`
+    : s || null;
+}
+
+const QUAKE_ALERT = Object.freeze({
+  green: 'Verde (impacto baixo)',
+  yellow: 'Amarelo (impacto local)',
+  orange: 'Laranja (impacto regional)',
+  red: 'Vermelho (impacto alto)',
+});
+
+export function magnitudeWord(mag) {
+  if (!finite(mag)) return null;
+  if (mag < 4) return 'Leve';
+  if (mag < 5) return 'Moderado';
+  if (mag < 6) return 'Forte';
+  if (mag < 7) return 'Muito forte';
+  if (mag < 8) return 'Grande';
+  return 'Enorme';
+}
+
+export function earthquakeSheet(q = {}) {
+  const depth = finite(q.depthKm) ? q.depthKm : null;
+  return sheet({
+    icon: 'earthquake',
+    kicker: 'TERREMOTO',
+    title: finite(q.mag)
+      ? `Magnitude ${fmtNum(q.mag, 1)}${q.magType ? ` ${q.magType}` : ''}`
+      : 'Terremoto',
+    subtitle: placePt(q.place),
+    accent:
+      depth == null || depth < 70
+        ? '#ff5252'
+        : depth < 300
+          ? '#ff9800'
+          : '#ffd600',
+    alert: q.tsunami ? '⚠ Possibilidade de tsunami informada pelo USGS' : null,
+    sections: [
+      section('Evento', [
+        ['Intensidade', magnitudeWord(q.mag)],
+        ['Quando', q.time ? `${fmtWhen(q.time)} (${fmtAge(q.time)})` : null],
+        ['Local', placePt(q.place)],
+        [
+          'Profundidade',
+          depth == null
+            ? null
+            : `${fmtNum(depth, 1)} km (${depth < 70 ? 'rasa' : depth < 300 ? 'intermediária' : 'profunda'})`,
+        ],
+        ['Coordenadas', fmtCoords(q.lat, q.lon)],
+      ]),
+      section('Impacto', [
+        ['Alerta PAGER', QUAKE_ALERT[q.alert] || q.alert || null],
+        [
+          'Pessoas que relataram sentir',
+          finite(q.felt) && q.felt > 0 ? fmtNum(q.felt) : null,
+        ],
+        ['Intensidade sentida (CDI)', finite(q.cdi) ? fmtNum(q.cdi, 1) : null],
+        [
+          'Intensidade instrumental (MMI)',
+          finite(q.mmi) ? fmtNum(q.mmi, 1) : null,
+        ],
+        ['Relevância (0–1000+)', finite(q.sig) ? fmtNum(q.sig) : null],
+      ]),
+      section('Dados', [
+        [
+          'Situação',
+          q.status === 'reviewed'
+            ? 'Revisado por sismólogo'
+            : q.status === 'automatic'
+              ? 'Automático (pode mudar)'
+              : q.status || null,
+        ],
+        ['Rede', q.network ? q.network.toUpperCase() : null],
+        ['Estações usadas', finite(q.stations) ? fmtNum(q.stations) : null],
+        ['Atualizado em', fmtWhen(q.updated)],
+        ['Código USGS', q.stableId || null],
+      ]),
+    ],
+    links: [
+      q.url ? { label: 'Página do USGS', href: q.url } : null,
+      mapsLink(q.lat, q.lon),
+    ],
+    note: 'Fonte: USGS (Serviço Geológico dos EUA), últimas 24 h, magnitude 2,5 ou mais.',
+  });
+}

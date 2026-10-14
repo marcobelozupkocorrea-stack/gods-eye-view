@@ -317,6 +317,18 @@ const layers = [
     noQuery: 'map overlay; no countable records',
   },
   {
+    id: 'brazil-radar',
+    aliases: [
+      'radar brasil',
+      'radar de chuva',
+      'radar meteorológico',
+      'brazil radar',
+      'chuva agora',
+    ],
+    context: false,
+    noQuery: 'map overlay; no countable records',
+  },
+  {
     id: 'wind',
     aliases: ['winds', 'wind map'],
     context: false,

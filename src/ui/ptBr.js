@@ -15,7 +15,87 @@ const GROUPS = Object.freeze({
   Weather: 'Clima e alertas',
   Utilities: 'Utilidades',
   'Other layers': 'Outras camadas',
+  'Brazil alerts': 'Alertas do Brasil',
+  'Weather now': 'Tempo',
+  'Outside Brazil': 'Só fora do Brasil',
 });
+
+/**
+ * barreto.top: CAMADAS grouping for the Portuguese build. Brazilian alerts
+ * come first; layers whose sources do not cover Brazil sit in a last,
+ * collapsible "Só fora do Brasil" group. Ids not listed fall back to the
+ * upstream grouping.
+ */
+export const BRAZIL_PANEL_GROUPS = Object.freeze([
+  Object.freeze({
+    label: 'Brazil alerts',
+    ids: Object.freeze([
+      'inmet-alerts',
+      'defesa-civil-alerts',
+      'cemaden-alerts',
+      'local-firms',
+      'deter-alerts',
+    ]),
+  }),
+  Object.freeze({
+    label: 'Movement',
+    ids: Object.freeze([
+      'flights',
+      'military',
+      'ais-live-vessels',
+      'satellites',
+      'traffic',
+      'bikeshare',
+      'local-adsb',
+    ]),
+  }),
+  Object.freeze({
+    label: 'Cameras',
+    ids: Object.freeze(['cctv', 'street-level', 'recent-imagery']),
+  }),
+  Object.freeze({
+    label: 'Weather now',
+    ids: Object.freeze([
+      'brazil-radar',
+      'weather-satellite',
+      'wind',
+      'weather-lightning',
+    ]),
+  }),
+  Object.freeze({
+    label: 'Events',
+    ids: Object.freeze(['earthquakes', 'rocket-launches']),
+  }),
+  Object.freeze({
+    label: 'Infrastructure',
+    ids: Object.freeze([
+      'military-installations',
+      'local-datacenters',
+      'telegeography-submarine-cables',
+      'local-dams',
+    ]),
+  }),
+  Object.freeze({
+    label: 'Utilities',
+    ids: Object.freeze(['directions', 'radio']),
+  }),
+  Object.freeze({
+    label: 'Outside Brazil',
+    collapsible: true,
+    ids: Object.freeze([
+      'weather-radar',
+      'fire-perimeters',
+      'weather-cyclones',
+      'transit',
+      'alpr-cameras',
+    ]),
+  }),
+]);
+
+/** Panel grouping for the page language (null keeps the upstream groups). */
+export function panelGroupsForPage(doc) {
+  return isPortugueseUi(doc) ? BRAZIL_PANEL_GROUPS : null;
+}
 
 const LAYERS = Object.freeze({
   satellites: 'Satélites',
@@ -44,6 +124,7 @@ const LAYERS = Object.freeze({
   'cemaden-alerts': 'Alertas Cemaden',
   wind: 'Vento',
   'weather-radar': 'Radar de chuva (EUA)',
+  'brazil-radar': 'Radar de chuva (Brasil)',
   'weather-satellite': 'Nuvens por satélite',
   'weather-lightning': 'Raios',
   'weather-cyclones': 'Ciclones',

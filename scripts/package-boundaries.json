@@ -2245,7 +2245,9 @@
       "src/ui/barreto/credits.js",
       "src/ui/barreto/session.js",
       "src/ui/barreto/detailsModel.js",
-      "src/ui/barreto/details.js"
+      "src/ui/barreto/details.js",
+      "src/ui/barreto/liveText.js",
+      "src/layers/brazilRadar/index.js"
     ],
     "external": [
       "hls.js",
@@ -2783,7 +2785,8 @@
       "src/layers/points/source.js",
       "src/data/deter.js",
       "src/layers/points/cards.js",
-      "src/layers/points/index.js"
+      "src/layers/points/index.js",
+      "src/layers/brazilRadar/index.js"
     ],
     "external": [
       "hls.js",
