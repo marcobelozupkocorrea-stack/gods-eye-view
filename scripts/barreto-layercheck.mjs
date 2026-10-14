@@ -374,15 +374,22 @@ const LAYERS = [
     async () => {
       const status = json(await get('/api/tomtom/status'));
       const roads = await get('https://tiles.openfreemap.org/planet');
-      const key = status?.configured ?? status?.enabled ?? status?.ok;
       if (roads.status !== 200)
         return ['FALHA', `mapa de vias HTTP ${roads.status}`];
-      return key
-        ? ['OK', 'vias + fluxo ao vivo TomTom']
-        : [
-            'SEM CHAVE',
-            'mostra as vias, mas o fluxo é SIMULADO: falta TOMTOM_API_KEY (plano gratuito da TomTom)',
-          ];
+      if (status?.hasKey) {
+        // One real flow tile over São Paulo proves the key works.
+        const tile = await get('/api/tomtom/flow/10/379/580.pbf');
+        return tile.status === 200
+          ? [
+              'OK',
+              `vias + fluxo ao vivo TomTom (${status.dailyCount ?? '?'} de ${status.budget ?? '?'} pedidos hoje)`,
+            ]
+          : ['FALHA', `chave TomTom recusada: HTTP ${tile.status}`];
+      }
+      return [
+        'SEM CHAVE',
+        'mostra as vias, mas o fluxo é SIMULADO: falta TOMTOM_API_KEY (plano gratuito da TomTom)',
+      ];
     },
   ],
   [
