@@ -61,10 +61,11 @@ const SECTIONS = [
     icon: 'directions_car',
     title: 'Rotas com trânsito',
     items: [
-      'Ligue <b>Rotas</b> em CAMADAS. Toque em <b>ORIGEM</b> (ou <b>DAQUI</b> para usar sua localização) e depois no mapa; faça o mesmo com <b>DESTINO</b>.',
-      'De carro, a rota considera o <b>trânsito ao vivo</b> (TomTom): mostra o atraso, a hora de chegada, trechos lentos em amarelo/laranja/vermelho e até 3 opções (<b>ROTA 1/2/3</b>). Atualiza sozinha a cada 5 min.',
-      '<b>SEM PEDÁGIO</b> recalcula evitando pedágios. Toque numa rota cinza para escolhê-la.',
-      'Para dirigir com voz e GPS, use <b>ABRIR NO WAZE</b> ou <b>GOOGLE MAPS</b>.',
+      'Toque no botão <span class="ms">directions</span> ao lado da busca (ou em <b>Rota</b> num resultado da busca). Digite de onde e para onde: endereço, CEP, nome de lugar, um dos <b>Meus lugares</b> ou <b>Minha localização</b>.',
+      'De carro, a rota considera o <b>trânsito ao vivo</b> (TomTom): atraso, hora de chegada, trechos lentos em amarelo/laranja/vermelho, acidentes e obras com ícone no mapa, e até 3 opções. Atualiza sozinha a cada 5 min.',
+      '<b>Saída</b>: escolha "daqui a 1 hora" ou um dia e hora para ver quanto vai demorar com a previsão de trânsito. <b>Adicionar parada</b> põe até 10 pontos no caminho. <b>Sem pedágio</b> evita pedágios.',
+      '<b>No caminho</b> mostra alertas do INMET e da Defesa Civil, chuva no radar, Cemaden e câmeras ao longo da rota — toque num item para ir até ele.',
+      'Salve lugares (Casa, Trabalho…) em <b>Meus lugares</b>: ficam na sua conta, no celular e no computador. Para dirigir com voz e GPS, use <b>Abrir no Waze</b> ou <b>Google Maps</b>.',
     ],
   },
   {
@@ -80,7 +81,9 @@ const SECTIONS = [
     icon: 'search',
     title: 'Ir até um lugar',
     items: [
-      'Na barra <b>LOCAL</b> (embaixo), toque numa cidade brasileira ou digite um endereço, cidade ou coordenada e aperte Enter.',
+      'Use a <b>busca</b> no alto: digite lugar, endereço com número ou CEP — os resultados aparecem enquanto você digita (Brasil primeiro).',
+      'Embaixo da busca aparece <b>onde você está olhando</b> (bairro, cidade, estado). <b>Limites</b> desenha a divisa dessa área no mapa.',
+      'Na barra <b>LOCAL</b> (embaixo) há atalhos para capitais.',
     ],
   },
   {

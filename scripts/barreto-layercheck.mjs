@@ -670,6 +670,22 @@ const LAYERS = [
     },
   ],
   [
+    'Busca de lugares',
+    async () => {
+      const res = await get('/api/br/search?q=01310-100');
+      const first = json(res)?.results?.[0];
+      const rev = json(
+        await get('/api/br/reverse?lat=-23.5613&lon=-46.6560&level=bairro'),
+      );
+      return res.status === 200 && first
+        ? [
+            rev?.label ? 'OK' : 'LIMITADO',
+            `CEP 01310-100 → ${first.name} (${first.detail}); centro do mapa → ${rev?.label || 'sem nome (Nominatim fora do ar)'}`,
+          ]
+        : ['FALHA', `HTTP ${res.status}`];
+    },
+  ],
+  [
     'Rádio',
     async () => {
       const res = await get('/api/radio/stations');
