@@ -6,6 +6,10 @@ import {
   normalizeRouteProfile,
   projectRouteResult,
 } from '../../../src/data/placeProviderPayloads.js';
+import { createTomTomRouteBudget, fetchTomTomRoute } from './tomtomRoute.js';
+
+/** barreto.top: traffic-aware routes are fresh for two minutes. */
+const TRAFFIC_ROUTE_CACHE_MS = 120_000;
 
 /**
  * OSM routing (FOSSGIS OSRM) cache: profile|coords ->
@@ -158,6 +162,7 @@ async function fetchRoute({
   base,
   coords,
   withSteps,
+  lang = 'en',
   fetchImpl,
 }) {
   // `steps` is opt-in per request. Asking for maneuvers on every call made the
@@ -208,7 +213,7 @@ async function fetchRoute({
     return { payload: null, error: 'no route found' };
   const payload = projectRouteResult(route, profile);
   if (withSteps) {
-    const { steps, truncated } = normalizeOsrmSteps(route);
+    const { steps, truncated } = normalizeOsrmSteps(route, { lang });
     payload.steps = steps;
     if (truncated) payload.stepsTruncated = true;
   }
@@ -217,9 +222,20 @@ async function fetchRoute({
 
 export function installRouteMiddleware(
   middlewares,
-  { endpoints = {}, fetchImpl = (...args) => fetch(...args) } = {},
+  {
+    endpoints = {},
+    fetchImpl = (...args) => fetch(...args),
+    tomtomKey = process.env.TOMTOM_API_KEY || '',
+    tomtomBudget = null,
+  } = {},
 ) {
   const _routeCache = new Map();
+  // barreto.top: car routes go to TomTom (live traffic) when a key is set.
+  const _trafficCache = new Map();
+  const _trafficInflight = new Map();
+  const _tomtomBudget = tomtomKey
+    ? tomtomBudget || createTomTomRouteBudget()
+    : null;
 
   // Real OSM routing via the public FOSSGIS OSRM servers (foot/car/bike).
   // GET /api/route?profile=foot|car|bike&coords=lon,lat;lon,lat[;...][&steps=1]
@@ -289,7 +305,45 @@ export function installRouteMiddleware(
       }
       if (totalKm > ROUTE_MAX_TOTAL_KM) return fail('route too long');
       const coords = clean.join(';');
-      const cacheKey = `${profile}|${coords}`;
+      const lang = url.searchParams.get('lang') === 'pt' ? 'pt' : 'en';
+      const avoidTolls = url.searchParams.get('avoid') === 'tolls';
+      if (
+        profile === 'car' &&
+        _tomtomBudget &&
+        url.searchParams.get('provider') !== 'osm'
+      ) {
+        const key = `${coords}|${lang}|${avoidTolls ? 't' : ''}`;
+        const hit = _trafficCache.get(key);
+        let traffic =
+          hit && Date.now() - hit.at <= TRAFFIC_ROUTE_CACHE_MS
+            ? hit.payload
+            : null;
+        if (!traffic) {
+          let pending = _trafficInflight.get(key);
+          if (!pending) {
+            pending = fetchTomTomRoute(pts, {
+              key: tomtomKey,
+              lang: lang === 'pt' ? 'pt-BR' : 'en-GB',
+              avoidTolls,
+              budget: _tomtomBudget,
+              fetchImpl,
+            }).finally(() => _trafficInflight.delete(key));
+            _trafficInflight.set(key, pending);
+          }
+          traffic = await pending;
+          if (traffic) {
+            _trafficCache.set(key, { at: Date.now(), payload: traffic });
+            if (_trafficCache.size > 200)
+              _trafficCache.delete(_trafficCache.keys().next().value);
+          }
+        }
+        if (traffic) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(traffic));
+          return;
+        }
+      }
+      const cacheKey = `${profile}|${coords}|${lang}`;
       const base =
         endpoints[profile] ||
         `https://routing.openstreetmap.de/routed-${profile}`;
@@ -322,6 +376,7 @@ export function installRouteMiddleware(
           base,
           coords,
           withSteps: wantSteps,
+          lang,
           fetchImpl,
         });
         _routeInflight.set(inflightKey, pending);

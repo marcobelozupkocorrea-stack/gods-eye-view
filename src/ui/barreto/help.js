@@ -58,6 +58,16 @@ const SECTIONS = [
     ],
   },
   {
+    icon: 'directions_car',
+    title: 'Rotas com trânsito',
+    items: [
+      'Ligue <b>Rotas</b> em CAMADAS. Toque em <b>ORIGEM</b> (ou <b>DAQUI</b> para usar sua localização) e depois no mapa; faça o mesmo com <b>DESTINO</b>.',
+      'De carro, a rota considera o <b>trânsito ao vivo</b> (TomTom): mostra o atraso, a hora de chegada, trechos lentos em amarelo/laranja/vermelho e até 3 opções (<b>ROTA 1/2/3</b>). Atualiza sozinha a cada 5 min.',
+      '<b>SEM PEDÁGIO</b> recalcula evitando pedágios. Toque numa rota cinza para escolhê-la.',
+      'Para dirigir com voz e GPS, use <b>ABRIR NO WAZE</b> ou <b>GOOGLE MAPS</b>.',
+    ],
+  },
+  {
     icon: 'videocam',
     title: 'Câmeras ao vivo',
     items: [

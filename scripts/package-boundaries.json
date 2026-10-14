@@ -83,7 +83,8 @@
       "src/localRequestGate.mjs",
       "src/data/routeSteps.js",
       "src/sources/httpBody.js",
-      "src/sources/rateLimit.js"
+      "src/sources/rateLimit.js",
+      "server/providers/places/tomtomRoute.js"
     ],
     "external": []
   },
@@ -246,7 +247,8 @@
       "src/data/routeSteps.js",
       "src/sources/httpBody.js",
       "src/sources/overpass.js",
-      "src/sources/rateLimit.js"
+      "src/sources/rateLimit.js",
+      "server/providers/places/tomtomRoute.js"
     ],
     "external": []
   },

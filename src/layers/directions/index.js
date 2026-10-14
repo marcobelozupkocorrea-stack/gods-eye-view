@@ -37,6 +37,56 @@ export const DIRECTIONS_MODES = Object.freeze({
 });
 export const DEFAULT_DIRECTIONS_MODE = 'car';
 
+/**
+ * barreto.top: Portuguese copy, chosen per call from the page language so the
+ * pure helpers stay English wherever there is no Portuguese document (tests,
+ * upstream pages).
+ */
+export const isPortugueseDirections = () => {
+  try {
+    return /^pt\b/i.test(globalThis.document?.documentElement?.lang || '');
+  } catch {
+    return false;
+  }
+};
+const PT_MODES = Object.freeze({
+  car: Object.freeze({ chip: 'CARRO', word: 'Carro' }),
+  foot: Object.freeze({ chip: 'A PÉ', word: 'A pé' }),
+  bike: Object.freeze({ chip: 'BICICLETA', word: 'Bicicleta' }),
+});
+
+/** Traffic colour by TomTom magnitudeOfDelay (1 minor … 4 closed). */
+export const DIRECTIONS_TRAFFIC_COLORS = Object.freeze({
+  1: '#ffd23f',
+  2: '#ff8c1a',
+  3: '#ff3b30',
+  4: '#8b0000',
+});
+export function trafficColor(magnitude, category) {
+  if (category === 'ROAD_CLOSURE') return DIRECTIONS_TRAFFIC_COLORS[4];
+  return DIRECTIONS_TRAFFIC_COLORS[Math.min(4, Math.max(1, magnitude || 2))];
+}
+
+/** "17:45" from an ISO time with offset, in the page's local clock. */
+export function clockTime(iso) {
+  const ms = Date.parse(iso || '');
+  if (!Number.isFinite(ms)) return '';
+  const d = new Date(ms);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/** Deep links that hand the route to a navigation app on the phone. */
+export function navigationAppUrl(app, a, b, mode = 'car') {
+  if (!b) return null;
+  const dest = `${b.lat.toFixed(6)},${b.lon.toFixed(6)}`;
+  if (app === 'waze')
+    return `https://waze.com/ul?ll=${encodeURIComponent(dest)}&navigate=yes`;
+  const travel =
+    mode === 'foot' ? 'walking' : mode === 'bike' ? 'bicycling' : 'driving';
+  const origin = a ? `&origin=${a.lat.toFixed(6)},${a.lon.toFixed(6)}` : '';
+  return `https://www.google.com/maps/dir/?api=1${origin}&destination=${dest}&travelmode=${travel}`;
+}
+
 /** Route colour — the annotation palette's cyan, so voice routes and Directions match. */
 export const DIRECTIONS_ROUTE_COLOR = '#39d0ff';
 const MARKER_A_COLOR = Cesium.Color.fromCssColorString('#5dff9f');
@@ -88,6 +138,13 @@ export function normalizeDirectionsParams(params = {}) {
     out.arm = params.arm === 'a' || params.arm === 'b' ? params.arm : null;
   }
   if (params.swap === true) out.swap = true;
+  if (params.avoidTolls !== undefined)
+    out.avoidTolls = params.avoidTolls === true;
+  if (params.route !== undefined)
+    out.route =
+      Number.isInteger(params.route) && params.route >= 0 ? params.route : null;
+  if (params.here === true) out.here = true;
+  if (params.refresh === true) out.refresh = true;
   if (params.fly === true) out.fly = true;
   if (params.clear === true) out.clear = true;
   if (params.step !== undefined) {
@@ -104,33 +161,77 @@ export function normalizeDirectionsParams(params = {}) {
  */
 export function directionsRowControls(state) {
   const { mode, armed, a, b, status, route, selectedStep, flightStep } = state;
+  const pt = isPortugueseDirections();
   const routing = status === 'routing';
-  const chips = Object.entries(DIRECTIONS_MODES).map(([id, spec]) => ({
-    id: `mode-${id}`,
-    label: spec.chip,
-    active: mode === id,
-    state: mode === id ? 'active' : 'idle',
-    title: `${spec.word} — reroute for ${spec.word.toLowerCase()}`,
-    params: { mode: id },
-  }));
+  const chips = Object.entries(DIRECTIONS_MODES).map(([id, spec]) => {
+    const copy = pt ? PT_MODES[id] : spec;
+    return {
+      id: `mode-${id}`,
+      label: copy.chip,
+      active: mode === id,
+      state: mode === id ? 'active' : 'idle',
+      title: pt
+        ? `${copy.word} — refazer a rota`
+        : `${spec.word} — reroute for ${spec.word.toLowerCase()}`,
+      params: { mode: id },
+    };
+  });
+  const placed = pt ? ' ✓' : ' ✓';
   chips.push({
     id: 'set-a',
-    label: armed === 'a' ? 'CLICK MAP' : a ? 'A ✓' : 'SET A',
+    label:
+      armed === 'a'
+        ? pt
+          ? 'TOQUE NO MAPA'
+          : 'CLICK MAP'
+        : a
+          ? pt
+            ? `ORIGEM${placed}`
+            : 'A ✓'
+          : pt
+            ? 'ORIGEM'
+            : 'SET A',
     active: armed === 'a',
     state: armed === 'a' ? 'active' : 'idle',
-    title:
-      armed === 'a'
+    title: pt
+      ? armed === 'a'
+        ? 'Toque num ponto do mapa para a origem (toque de novo para cancelar)'
+        : 'Depois toque no mapa para marcar a origem'
+      : armed === 'a'
         ? 'Click a spot on the globe to place A (click again to cancel)'
         : 'Then click the globe to place the start',
     params: { arm: armed === 'a' ? null : 'a' },
   });
+  if (pt && state.canLocate !== false)
+    chips.push({
+      id: 'here',
+      label: state.locating ? 'LOCALIZANDO…' : 'DAQUI',
+      busy: Boolean(state.locating),
+      state: state.locating ? 'loading' : 'idle',
+      title: 'Usar a sua localização atual como origem',
+      params: { here: true },
+    });
   chips.push({
     id: 'set-b',
-    label: armed === 'b' ? 'CLICK MAP' : b ? 'B ✓' : 'SET B',
+    label:
+      armed === 'b'
+        ? pt
+          ? 'TOQUE NO MAPA'
+          : 'CLICK MAP'
+        : b
+          ? pt
+            ? `DESTINO${placed}`
+            : 'B ✓'
+          : pt
+            ? 'DESTINO'
+            : 'SET B',
     active: armed === 'b',
     state: armed === 'b' ? 'active' : 'idle',
-    title:
-      armed === 'b'
+    title: pt
+      ? armed === 'b'
+        ? 'Toque num ponto do mapa para o destino (toque de novo para cancelar)'
+        : 'Depois toque no mapa para marcar o destino'
+      : armed === 'b'
         ? 'Click a spot on the globe to place B (click again to cancel)'
         : 'Then click the globe to place the destination',
     params: { arm: armed === 'b' ? null : 'b' },
@@ -140,31 +241,108 @@ export function directionsRowControls(state) {
     label: '⇄',
     disabled: !(a && b) || routing,
     state: 'idle',
-    title: 'Swap A and B',
+    title: pt ? 'Inverter origem e destino' : 'Swap A and B',
     params: { swap: true },
   });
+  if (pt && mode === 'car')
+    chips.push({
+      id: 'tolls',
+      label: 'SEM PEDÁGIO',
+      active: Boolean(state.avoidTolls),
+      state: state.avoidTolls ? 'active' : 'idle',
+      disabled: routing,
+      title: state.avoidTolls
+        ? 'Evitando pedágios — toque para permitir'
+        : 'Calcular a rota evitando pedágios',
+      params: { avoidTolls: !state.avoidTolls },
+    });
+  const options = Array.isArray(state.routes) ? state.routes : [];
+  if (options.length > 1)
+    options.forEach((option, index) => {
+      chips.push({
+        id: `route-${index}`,
+        label: `${pt ? 'ROTA' : 'ROUTE'} ${index + 1} · ${formatRouteDuration(option.durationS)}`,
+        active: index === (state.routeIndex ?? 0),
+        state: index === (state.routeIndex ?? 0) ? 'active' : 'idle',
+        disabled: routing,
+        title: pt
+          ? `${formatRouteDistance(option.distanceM)}${option.traffic?.delayS >= 60 ? ` · +${formatRouteDuration(option.traffic.delayS)} de trânsito` : ''}`
+          : formatRouteDistance(option.distanceM),
+        params: { route: index },
+      });
+    });
   const flying = Number.isInteger(flightStep);
   chips.push({
     id: 'fly',
-    label: routing ? 'FLY ···' : flying ? 'FLYING' : 'FLY',
+    label: pt
+      ? routing
+        ? 'SOBREVOAR ···'
+        : flying
+          ? 'SOBREVOANDO'
+          : 'SOBREVOAR'
+      : routing
+        ? 'FLY ···'
+        : flying
+          ? 'FLYING'
+          : 'FLY',
     disabled: !route || routing,
     busy: routing || flying,
     active: flying,
     state: routing || flying ? 'loading' : 'idle',
-    title: route ? 'Fly the camera along the route' : 'Place A and B first',
+    title: pt
+      ? route
+        ? 'Levar a câmera pelo caminho'
+        : 'Marque origem e destino primeiro'
+      : route
+        ? 'Fly the camera along the route'
+        : 'Place A and B first',
     params: { fly: true },
   });
+  if (pt && b) {
+    for (const [app, label] of [
+      ['waze', 'ABRIR NO WAZE'],
+      ['google', 'GOOGLE MAPS'],
+    ]) {
+      const href = navigationAppUrl(app, a, b, mode);
+      chips.push({
+        id: `open-${app}`,
+        label,
+        state: 'idle',
+        title:
+          app === 'waze'
+            ? 'Navegar até o destino com o Waze (voz e GPS)'
+            : 'Abrir a rota no Google Maps',
+        onClick: () => {
+          try {
+            globalThis.open?.(href, '_blank', 'noopener');
+          } catch {
+            /* popup blocked */
+          }
+        },
+      });
+    }
+  }
   chips.push({
     id: 'clear',
-    label: 'CLEAR',
+    label: pt ? 'LIMPAR' : 'CLEAR',
     disabled: !a && !b && !route,
     state: 'idle',
-    title: 'Remove the route and both markers',
+    title: pt
+      ? 'Apagar a rota e os marcadores'
+      : 'Remove the route and both markers',
     params: { clear: true },
   });
   return {
     chips,
-    legend: [],
+    legend:
+      pt && route?.congestion?.length
+        ? [
+            { label: 'Fluindo', color: DIRECTIONS_ROUTE_COLOR },
+            { label: 'Lento', color: DIRECTIONS_TRAFFIC_COLORS[1] },
+            { label: 'Congestionado', color: DIRECTIONS_TRAFFIC_COLORS[2] },
+            { label: 'Parado', color: DIRECTIONS_TRAFFIC_COLORS[3] },
+          ]
+        : [],
     list: directionsStepList({
       route,
       selectedStep: selectedStep ?? null,
@@ -285,13 +463,20 @@ export function directionsStepList({
       id: 'step-truncated',
       ordinal: items.length + 1,
       lead: '',
-      text: `Only the first ${steps.length} turns of this route are shown`,
+      text: isPortugueseDirections()
+        ? `Só as primeiras ${steps.length} manobras desta rota aparecem`
+        : `Only the first ${steps.length} turns of this route are shown`,
       active: false,
       current: false,
       disabled: true,
     });
   }
-  return { ariaLabel: 'Turn-by-turn directions', items };
+  return {
+    ariaLabel: isPortugueseDirections()
+      ? 'Instruções passo a passo'
+      : 'Turn-by-turn directions',
+    items,
+  };
 }
 
 /**
@@ -331,12 +516,22 @@ export function directionsStats(state) {
     armed,
     pointerBlocked,
   } = state;
-  const source = 'OSM routing';
+  const pt = isPortugueseDirections();
+  const source =
+    route?.provider === 'tomtom'
+      ? pt
+        ? 'TomTom · trânsito ao vivo'
+        : 'TomTom · live traffic'
+      : pt
+        ? 'OpenStreetMap (sem trânsito)'
+        : 'OSM routing';
   if (pointerBlocked) {
     return {
       count: route?.steps.length || 0,
       lastUpdate,
-      error: 'Another map tool is using clicks — close it, then SET A again',
+      error: pt
+        ? 'Outra ferramenta do mapa está usando os toques — feche-a e marque a origem de novo'
+        : 'Another map tool is using clicks — close it, then SET A again',
       status: 'empty',
       source,
     };
@@ -347,7 +542,7 @@ export function directionsStats(state) {
       lastUpdate,
       error: null,
       loading: true,
-      loadingLabel: 'Routing…',
+      loadingLabel: pt ? 'Calculando a rota…' : 'Routing…',
       source,
     };
   }
@@ -355,7 +550,7 @@ export function directionsStats(state) {
     return {
       count: 0,
       lastUpdate,
-      error: error || 'No route found',
+      error: error || (pt ? 'Nenhuma rota encontrada' : 'No route found'),
       status: 'empty',
       source,
     };
@@ -364,10 +559,30 @@ export function directionsStats(state) {
   // set (not only while loading), so the route summary and the placement
   // guidance ride on it; `coverage` carries the same text for stats readers.
   if (route) {
-    const word = DIRECTIONS_MODES[mode]?.word || mode;
-    const summary =
-      `${formatRouteDistance(route.distanceM)} · ${formatRouteDuration(route.durationS)} · ${word}` +
-      (route.stepsTruncated ? ` · first ${route.steps.length} turns` : '');
+    const word =
+      (pt ? PT_MODES[mode]?.word : DIRECTIONS_MODES[mode]?.word) || mode;
+    const delay = route.traffic?.delayS || 0;
+    const arrival = clockTime(route.traffic?.arrival);
+    const parts = [
+      formatRouteDistance(route.distanceM),
+      formatRouteDuration(route.durationS) +
+        (delay >= 60
+          ? pt
+            ? ` (+${formatRouteDuration(delay)} de trânsito)`
+            : ` (+${formatRouteDuration(delay)} traffic)`
+          : ''),
+    ];
+    if (arrival) parts.push(pt ? `chega ${arrival}` : `arrive ${arrival}`);
+    parts.push(word);
+    if (route.stepsTruncated)
+      parts.push(
+        pt
+          ? `primeiras ${route.steps.length} manobras`
+          : `first ${route.steps.length} turns`,
+      );
+    if (pt && mode === 'car' && route.provider !== 'tomtom')
+      parts.push('sem trânsito');
+    const summary = parts.join(' · ');
     return {
       count: route.steps.length,
       lastUpdate,
@@ -378,7 +593,14 @@ export function directionsStats(state) {
     };
   }
   let coverage;
-  if (armed) coverage = `Click the globe to place ${armed.toUpperCase()}`;
+  if (pt) {
+    if (armed)
+      coverage = `Toque no mapa para marcar ${armed === 'a' ? 'a origem' : 'o destino'}`;
+    else if (a && !b) coverage = 'Agora toque em DESTINO e depois no mapa';
+    else if (!a && b) coverage = 'Toque em ORIGEM (ou DAQUI) e depois no mapa';
+    else coverage = 'Toque em ORIGEM (ou DAQUI) e depois no mapa';
+  } else if (armed)
+    coverage = `Click the globe to place ${armed.toUpperCase()}`;
   else if (a && !b) coverage = 'SET B, then click the globe';
   else if (!a && b) coverage = 'SET A, then click the globe';
   else coverage = 'SET A, then click the globe';
@@ -405,11 +627,14 @@ export function directionsStepCopy(steps, index) {
   const leg = [];
   if (step.distanceM > 0) leg.push(formatRouteDistance(step.distanceM));
   if (step.durationS > 0) leg.push(formatRouteDuration(step.durationS));
+  const pt = isPortugueseDirections();
   details.push(
-    `Step ${index + 1} of ${steps.length}${leg.length ? ` · then ${leg.join(' · ')}` : ''}`,
+    pt
+      ? `Passo ${index + 1} de ${steps.length}${leg.length ? ` · depois ${leg.join(' · ')}` : ''}`
+      : `Step ${index + 1} of ${steps.length}${leg.length ? ` · then ${leg.join(' · ')}` : ''}`,
   );
   const next = steps[index + 1];
-  if (next) details.push(`Then: ${next.instruction}`);
+  if (next) details.push(`${pt ? 'Depois' : 'Then'}: ${next.instruction}`);
   return { title: step.instruction, details };
 }
 
@@ -487,7 +712,7 @@ export function normalizeRoutePayload(payload, mode) {
         Number.isFinite(step.lon),
     )
     .map((step, index) => ({ ...step, index }));
-  return {
+  const out = {
     distanceM: Math.max(0, Number(payload.distanceM) || 0),
     durationS: Math.max(0, Number(payload.durationS) || 0),
     geometry,
@@ -497,6 +722,45 @@ export function normalizeRoutePayload(payload, mode) {
     stepsTruncated: payload.stepsTruncated === true,
     mode,
   };
+  // barreto.top: traffic-aware extras (TomTom); absent for OSRM routes.
+  if (payload.provider === 'tomtom') {
+    out.provider = 'tomtom';
+    const t = payload.traffic || {};
+    out.traffic = {
+      delayS: Math.max(0, Number(t.delayS) || 0),
+      noTrafficS: Number.isFinite(Number(t.noTrafficS))
+        ? Number(t.noTrafficS)
+        : null,
+      arrival: typeof t.arrival === 'string' ? t.arrival : null,
+      departure: typeof t.departure === 'string' ? t.departure : null,
+    };
+    out.congestion = (
+      Array.isArray(payload.congestion) ? payload.congestion : []
+    )
+      .filter(
+        (c) =>
+          Number.isInteger(c?.from) &&
+          Number.isInteger(c?.to) &&
+          c.from >= 0 &&
+          c.to > c.from &&
+          c.to < geometry.length,
+      )
+      .map((c) => ({
+        from: c.from,
+        to: c.to,
+        magnitude: Number(c.magnitude) || 0,
+        category: typeof c.category === 'string' ? c.category : 'OTHER',
+        delayS: Math.max(0, Number(c.delayS) || 0),
+      }));
+  }
+  if (Array.isArray(payload.alternatives) && payload.alternatives.length)
+    out.alternatives = payload.alternatives
+      .map((alt) =>
+        normalizeRoutePayload({ ...alt, alternatives: undefined }, mode),
+      )
+      .filter(Boolean)
+      .slice(0, 2);
+  return out;
 }
 
 /**
@@ -545,6 +809,14 @@ export function createDirectionsLayer({ services, source }) {
   let _markerA = null;
   let _markerB = null;
   let _routeEntity = null;
+  /** barreto.top: traffic overlays and alternative routes drawn with the route. */
+  let _extraEntities = [];
+  /** Every option the router returned (main first); `_route` is one of them. */
+  let _routes = [];
+  let _routeIndex = 0;
+  let _avoidTolls = false;
+  let _locating = false;
+  let _refreshTimer = null;
   let _stepPoints = null;
   let _selectedStep = null;
   let _clickHandler = null;
@@ -593,6 +865,11 @@ export function createDirectionsLayer({ services, source }) {
       selectedStep: _selectedStep,
       flightStep: _flightStep,
       pointerBlocked: _pointerBlocked,
+      avoidTolls: _avoidTolls,
+      routes: _routes,
+      routeIndex: _routeIndex,
+      locating: _locating,
+      canLocate: Boolean(globalThis.navigator?.geolocation),
     };
   }
 
@@ -678,8 +955,111 @@ export function createDirectionsLayer({ services, source }) {
     stopStepAnchoring();
     removeEntity(_routeEntity);
     _routeEntity = null;
+    for (const entity of _extraEntities) removeEntity(entity);
+    _extraEntities = [];
     _stepPoints?.removeAll();
     syncRenderHold();
+  }
+
+  /** Alternatives (dim, clickable) and slow stretches (coloured) of the route. */
+  function drawRouteExtras(route) {
+    _routes.forEach((option, index) => {
+      if (option === route || option.geometry.length < 2) return;
+      _extraEntities.push(
+        _viewer.entities.add({
+          id: `directions:alt:${index}`,
+          polyline: {
+            positions: Cesium.Cartesian3.fromDegreesArray(
+              option.geometry.flat(),
+            ),
+            width: 7,
+            material:
+              Cesium.Color.fromCssColorString('#9fb3c8').withAlpha(0.55),
+            clampToGround: true,
+            classificationType: Cesium.ClassificationType.BOTH,
+            zIndex: 0,
+          },
+        }),
+      );
+    });
+    for (const [n, slow] of (route.congestion || []).entries()) {
+      const coords = route.geometry.slice(slow.from, slow.to + 1);
+      if (coords.length < 2) continue;
+      _extraEntities.push(
+        _viewer.entities.add({
+          id: `directions:traffic:${n}`,
+          polyline: {
+            positions: Cesium.Cartesian3.fromDegreesArray(coords.flat()),
+            width: 10,
+            material: Cesium.Color.fromCssColorString(
+              trafficColor(slow.magnitude, slow.category),
+            ),
+            clampToGround: true,
+            classificationType: Cesium.ClassificationType.BOTH,
+            zIndex: 2,
+          },
+        }),
+      );
+    }
+  }
+
+  function stopTrafficRefresh() {
+    if (_refreshTimer) clearInterval(_refreshTimer);
+    _refreshTimer = null;
+  }
+
+  /** Re-ask for a traffic-aware route every 5 min while it is on screen. */
+  function syncTrafficRefresh() {
+    const wanted =
+      _enabled && _route?.provider === 'tomtom' && _a && _b && _mode === 'car';
+    if (!wanted) return stopTrafficRefresh();
+    if (_refreshTimer) return;
+    _refreshTimer = setInterval(() => {
+      if (
+        globalThis.document?.visibilityState === 'hidden' ||
+        _flightId ||
+        _status === 'routing'
+      )
+        return;
+      void requestRoute({ silent: true });
+    }, 5 * 60_000);
+  }
+
+  function selectRouteOption(index) {
+    const option = _routes[index];
+    if (!option || option === _route) return false;
+    cancelOwnedFlight('directions-alternative');
+    _routeIndex = index;
+    _route = option;
+    drawRoute(option);
+    return true;
+  }
+
+  function useCurrentLocation() {
+    const geo = globalThis.navigator?.geolocation;
+    if (!geo || _locating) return;
+    _locating = true;
+    notifyRow();
+    geo.getCurrentPosition(
+      (position) => {
+        _locating = false;
+        const point = {
+          lat: Number(position?.coords?.latitude),
+          lon: Number(position?.coords?.longitude),
+        };
+        if (!_enabled || !placeDirectionsEndpoint('a', point)) notifyRow();
+      },
+      () => {
+        _locating = false;
+        _shellSeams?.showToast?.(
+          isPortugueseDirections()
+            ? 'Não foi possível obter sua localização — permita o acesso à localização no navegador'
+            : 'Could not get your location',
+        );
+        notifyRow();
+      },
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 60_000 },
+    );
   }
 
   function stopStepAnchoring() {
@@ -757,8 +1137,10 @@ export function createDirectionsLayer({ services, source }) {
         // BOTH: drape on 3D tiles when they are up and on terrain when they are
         // not, so the keyless globe shows the route too.
         classificationType: Cesium.ClassificationType.BOTH,
+        zIndex: 1,
       },
     });
+    drawRouteExtras(route);
     // One dot per decision; A and B already mark departure and arrival. The dots
     // start hidden and appear as anchorStepPoints resolves each ground cell.
     const cells = [];
@@ -780,6 +1162,11 @@ export function createDirectionsLayer({ services, source }) {
       });
     }
     services.credits?.showOsmCredit?.(_viewer, 'directions');
+    if (route.provider === 'tomtom')
+      services.credits?.registerDynamicCredit?.(_viewer, {
+        key: 'tomtom-routing',
+        html: 'Routes and live traffic © <a href="https://www.tomtom.com" target="_blank" rel="noopener">TomTom</a>',
+      });
     services.ground.warmGroundFloor(cells);
     _anchorAttempts = 0;
     _anchorStartedAt = Date.now();
@@ -789,11 +1176,11 @@ export function createDirectionsLayer({ services, source }) {
     services.render.governorRequestRender('directions-route');
   }
 
-  async function requestRoute() {
+  async function requestRoute({ silent = false } = {}) {
     if (!_a || !_b || !_enabled) return;
     // The route under an owned flight is about to be replaced, and a dolly
     // cannot be re-pointed mid-cut. Land it first (only if it is still ours).
-    cancelOwnedFlight('directions-reroute');
+    if (!silent) cancelOwnedFlight('directions-reroute');
     _routeAbort?.abort();
     const controller = new AbortController();
     _routeAbort = controller;
@@ -801,51 +1188,84 @@ export function createDirectionsLayer({ services, source }) {
     _routeSeq += 1;
     const seq = _routeSeq;
     const mode = _mode;
-    _status = 'routing';
-    _error = null;
-    notifyRow();
+    const previousIndex = _routeIndex;
+    if (!silent) {
+      _status = 'routing';
+      _error = null;
+      notifyRow();
+    }
     try {
       const payload = await source.getRoute(
-        { mode, a: _a, b: _b },
+        {
+          mode,
+          a: _a,
+          b: _b,
+          lang: isPortugueseDirections() ? 'pt' : undefined,
+          avoidTolls: _avoidTolls,
+        },
         {
           signal: controller.signal,
         },
       );
       if (seq !== _routeSeq || !_enabled) return;
       const route = normalizeRoutePayload(payload, mode);
+      if (!route && silent) return;
       if (!route) {
+        _routes = [];
+        _routeIndex = 0;
         _route = null;
         clearRouteGraphics();
         _status = 'error';
+        const pt = isPortugueseDirections();
         _error =
           payload?.error === 'no route found'
-            ? 'No route found between A and B'
+            ? pt
+              ? 'Nenhuma rota encontrada entre a origem e o destino'
+              : 'No route found between A and B'
             : payload?.error
-              ? `Routing failed: ${payload.error}`
-              : 'No route found between A and B';
+              ? pt
+                ? `Falha ao calcular a rota: ${payload.error}`
+                : `Routing failed: ${payload.error}`
+              : pt
+                ? 'Nenhuma rota encontrada entre a origem e o destino'
+                : 'No route found between A and B';
         return;
       }
-      _route = route;
+      _routes = [route, ...(route.alternatives || [])];
+      _routeIndex =
+        silent && previousIndex < _routes.length ? previousIndex : 0;
+      _route = _routes[_routeIndex];
       _status = 'ready';
       _lastUpdate = Date.now();
-      drawRoute(route);
+      // A silent traffic refresh keeps a flight that is riding the old line.
+      if (!(silent && _flightId)) drawRoute(_route);
     } catch (error) {
       if (seq !== _routeSeq || !_enabled) return;
+      if (silent) return;
+      _routes = [];
+      _routeIndex = 0;
       _route = null;
       clearRouteGraphics();
       _status = 'error';
       // A fetch that never reaches the proxy rejects with the browser's own
       // wording ("Failed to fetch"), which tells a reader nothing. Say what
       // happened instead.
+      const pt = isPortugueseDirections();
       _error =
         error?.name === 'AbortError'
-          ? 'Routing timed out'
+          ? pt
+            ? 'O cálculo da rota demorou demais'
+            : 'Routing timed out'
           : error?.name === 'TypeError'
-            ? 'Routing unavailable — no response from the routing service'
-            : error?.message || 'Routing unavailable';
+            ? pt
+              ? 'Rotas indisponíveis — o serviço não respondeu'
+              : 'Routing unavailable — no response from the routing service'
+            : error?.message ||
+              (pt ? 'Rotas indisponíveis' : 'Routing unavailable');
     } finally {
       clearTimeout(timer);
       if (_routeAbort === controller) _routeAbort = null;
+      syncTrafficRefresh();
       if (seq === _routeSeq) notifyRow();
       services.render.governorRequestRender('directions-route');
     }
@@ -970,6 +1390,9 @@ export function createDirectionsLayer({ services, source }) {
     _a = null;
     _b = null;
     _route = null;
+    _routes = [];
+    _routeIndex = 0;
+    stopTrafficRefresh();
     _status = 'idle';
     _error = null;
     removeEntity(_markerA);
@@ -1199,6 +1622,12 @@ export function createDirectionsLayer({ services, source }) {
         _selectStep(index);
         return;
       }
+      const altId = typeof picked?.id?.id === 'string' ? picked.id.id : '';
+      const alt = /^directions:alt:(\d+)$/.exec(altId);
+      if (alt) {
+        if (selectRouteOption(Number(alt[1]))) notifyRow();
+        return;
+      }
       if (_selectedStep !== null) _clearStepSelection();
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
     if (typeof document !== 'undefined')
@@ -1223,7 +1652,7 @@ export function createDirectionsLayer({ services, source }) {
     id: 'directions',
     name: 'Directions',
     icon: '🧭',
-    source: 'OSM routing',
+    source: 'OSM routing / TomTom',
     updateInterval: 0,
 
     /**
@@ -1305,6 +1734,14 @@ export function createDirectionsLayer({ services, source }) {
         if (_a && _b && _enabled) void requestRoute();
       }
       if (patch.arm !== undefined) setArmed(patch.arm);
+      if (patch.avoidTolls !== undefined && patch.avoidTolls !== _avoidTolls) {
+        _avoidTolls = patch.avoidTolls;
+        if (_a && _b && _enabled && _mode === 'car') void requestRoute();
+      }
+      if (patch.route !== undefined && patch.route !== null)
+        selectRouteOption(patch.route);
+      if (patch.here) useCurrentLocation();
+      if (patch.refresh && _a && _b && _enabled) void requestRoute();
       if (patch.swap && _a && _b) {
         [_a, _b] = [_b, _a];
         placeMarker('a', _a);
@@ -1322,7 +1759,7 @@ export function createDirectionsLayer({ services, source }) {
     },
 
     getParams() {
-      return { mode: _mode };
+      return _avoidTolls ? { mode: _mode, avoidTolls: true } : { mode: _mode };
     },
 
     getRowControls() {
@@ -1374,6 +1811,7 @@ export function createDirectionsLayer({ services, source }) {
       // layer that was never enabled: a claim or a flight left behind would
       // outlive the whole application.
       cancelOwnedFlight('directions-destroy');
+      stopTrafficRefresh();
       stopStepAnchoring();
       disarm();
       _shellSeams = null;

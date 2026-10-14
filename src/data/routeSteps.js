@@ -132,6 +132,86 @@ export function instructionFor(step) {
   }
 }
 
+const DIRECTION_WORDS_PT = Object.freeze({
+  left: 'à esquerda',
+  right: 'à direita',
+  'slight left': 'levemente à esquerda',
+  'slight right': 'levemente à direita',
+  'sharp left': 'acentuadamente à esquerda',
+  'sharp right': 'acentuadamente à direita',
+  straight: 'em frente',
+  uturn: 'o retorno',
+});
+
+/**
+ * barreto.top: the same sentence in Brazilian Portuguese.
+ * @param {{type?: string, modifier?: string, exit?: number, name?: string, ref?: string}} step
+ * @returns {string}
+ */
+export function instructionForPt(step) {
+  const type = cleanText(step?.type).toLowerCase();
+  const modifier = cleanText(step?.modifier).toLowerCase();
+  const dir = DIRECTION_WORDS_PT[modifier] || '';
+  const road = roadLabel(step);
+  const onto = road ? ` para ${road}` : '';
+  const on = road ? ` na ${road}` : '';
+  const side =
+    modifier === 'left' || modifier === 'right'
+      ? DIRECTION_WORDS_PT[modifier]
+      : '';
+  switch (type) {
+    case 'depart':
+      return road ? `Saia pela ${road}` : 'Saia';
+    case 'arrive':
+      return side ? `Chegada ao destino, ${side}` : 'Chegada ao destino';
+    case 'turn':
+      if (modifier === 'uturn') return `Faça o retorno${onto}`;
+      if (modifier === 'straight') return `Siga em frente${onto}`;
+      return dir ? `Vire ${dir}${onto}` : `Vire${onto}`;
+    case 'new name':
+      return `Continue${on}`;
+    case 'continue':
+      if (modifier === 'uturn') return `Faça o retorno${onto}`;
+      return dir && modifier !== 'straight'
+        ? `Continue ${dir}${onto}`
+        : `Siga em frente${on}`;
+    case 'end of road':
+      return dir
+        ? `No fim da via, vire ${dir}${onto}`
+        : `No fim da via, continue${onto}`;
+    case 'fork':
+      return dir
+        ? `Na bifurcação, mantenha-se ${dir}${onto}`
+        : `Na bifurcação, continue${onto}`;
+    case 'merge':
+      return `Entre na via${onto}`;
+    case 'on ramp':
+      return dir ? `Pegue o acesso ${dir}${onto}` : `Pegue o acesso${onto}`;
+    case 'off ramp':
+      return dir ? `Pegue a saída ${dir}${onto}` : `Pegue a saída${onto}`;
+    case 'roundabout':
+    case 'rotary': {
+      const exit =
+        Number.isInteger(step?.exit) && step.exit > 0 ? step.exit : null;
+      return exit
+        ? `Na rotatória, pegue a ${exit}ª saída${onto}`
+        : `Entre na rotatória${onto}`;
+    }
+    case 'roundabout turn':
+      return dir
+        ? `Na rotatória, vire ${dir}${onto}`
+        : `Na rotatória, continue${onto}`;
+    case 'exit roundabout':
+    case 'exit rotary':
+      return `Saia da rotatória${onto}`;
+    case 'use lane':
+      return dir ? `Use a faixa ${dir}${onto}` : `Continue${on}`;
+    case 'notification':
+    default:
+      return `Continue${on}`;
+  }
+}
+
 /**
  * Flatten an OSRM route's legs into the compact step list the proxy serves.
  * "exit roundabout" / "exit rotary" steps are folded into the roundabout
@@ -146,7 +226,8 @@ export function instructionFor(step) {
  *   name:string, ref:string|null, distanceM:number, durationS:number, lon:number, lat:number,
  *   instruction:string}>, truncated: boolean}}
  */
-export function normalizeOsrmSteps(route) {
+export function normalizeOsrmSteps(route, { lang = 'en' } = {}) {
+  const phrase = lang === 'pt' ? instructionForPt : instructionFor;
   const out = [];
   for (const leg of route?.legs || []) {
     for (const raw of leg?.steps || []) {
@@ -181,11 +262,11 @@ export function normalizeOsrmSteps(route) {
         if (!roadLabel(previous) && roadLabel(step)) {
           previous.name = step.name;
           previous.ref = step.ref;
-          previous.instruction = instructionFor(previous);
+          previous.instruction = phrase(previous);
         }
         continue;
       }
-      step.instruction = instructionFor(step);
+      step.instruction = phrase(step);
       out.push(step);
       if (out.length >= ROUTE_STEPS_MAX) return { steps: out, truncated: true };
     }

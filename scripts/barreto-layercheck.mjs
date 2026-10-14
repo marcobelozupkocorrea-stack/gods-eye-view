@@ -647,17 +647,25 @@ const LAYERS = [
     'Rotas',
     async () => {
       const res = await get(
-        '/api/route?profile=car&coords=-46.6333,-23.5505;-46.3336,-23.9608&steps=1',
+        '/api/route?profile=car&coords=-46.6333,-23.5505;-46.3336,-23.9608&steps=1&lang=pt',
       );
       const body = json(res);
-      const route = body?.routes?.[0] || body?.route || body;
-      const meters = body?.distanceM ?? route?.distance;
-      const km = meters ? (meters / 1000).toFixed(0) : null;
-      return res.status === 200
-        ? ['OK', `São Paulo → Santos: ${km ?? '?'} km`]
+      const meters = body?.distanceM;
+      const km = meters ? (meters / 1000).toFixed(0) : '?';
+      const min = body?.durationS ? Math.round(body.durationS / 60) : '?';
+      if (res.status !== 200 || !body?.ok)
+        return [
+          'FALHA',
+          `HTTP ${res.status} ${res.body.toString('utf8').slice(0, 100)}`,
+        ];
+      return body.provider === 'tomtom'
+        ? [
+            'OK',
+            `São Paulo → Santos: ${km} km, ${min} min com trânsito ao vivo (TomTom, +${Math.round((body.traffic?.delayS || 0) / 60)} min de lentidão, ${1 + (body.alternatives?.length || 0)} opções)`,
+          ]
         : [
-            'FALHA',
-            `HTTP ${res.status} ${res.body.toString('utf8').slice(0, 100)}`,
+            'LIMITADO',
+            `São Paulo → Santos: ${km} km, ${min} min sem trânsito (OpenStreetMap; TomTom indisponível ou cota do dia esgotada)`,
           ];
     },
   ],

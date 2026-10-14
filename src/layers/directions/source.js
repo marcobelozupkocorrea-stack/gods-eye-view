@@ -1,7 +1,14 @@
-/** Build the existing route-proxy query from geographic endpoints. */
-export function directionsRequestUrl(mode, a, b) {
+/** Build the existing route-proxy query from geographic endpoints.
+ * barreto.top: `lang: 'pt'` asks for Portuguese instructions and
+ * `avoidTolls` for a toll-free car route; both are omitted when unset, so the
+ * URL is unchanged for every other caller. */
+export function directionsRequestUrl(mode, a, b, { lang, avoidTolls } = {}) {
   const coords = `${a.lon.toFixed(6)},${a.lat.toFixed(6)};${b.lon.toFixed(6)},${b.lat.toFixed(6)}`;
-  return `/api/route?profile=${encodeURIComponent(mode)}&coords=${encodeURIComponent(coords)}&steps=1`;
+  return (
+    `/api/route?profile=${encodeURIComponent(mode)}&coords=${encodeURIComponent(coords)}&steps=1` +
+    (lang === 'pt' ? '&lang=pt' : '') +
+    (avoidTolls && mode === 'car' ? '&avoid=tolls' : '')
+  );
 }
 
 /** Acquire route records using caller-owned transport and an optional endpoint. */
@@ -10,9 +17,12 @@ export function createDirectionsSource({
   endpoint = '/api/route',
 } = {}) {
   return {
-    async getRoute({ mode, a, b }, { signal } = {}) {
+    async getRoute({ mode, a, b, lang, avoidTolls }, { signal } = {}) {
       signal?.throwIfAborted();
-      const query = directionsRequestUrl(mode, a, b).split('?')[1];
+      const query = directionsRequestUrl(mode, a, b, {
+        lang,
+        avoidTolls,
+      }).split('?')[1];
       const response = await fetchImpl(`${endpoint}?${query}`, {
         signal,
         headers: { Accept: 'application/json' },
