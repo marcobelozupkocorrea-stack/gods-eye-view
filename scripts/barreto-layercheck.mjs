@@ -340,16 +340,12 @@ const LAYERS = [
     'Navios ao vivo',
     async () => {
       const all = await get('/api/vessels?maxRows=12000');
-      const near = await get(
-        '/api/vessels?maxRows=12000&lat=-23.98&lon=-46.30&radius_km=250',
-      );
       const n = countOf(json(all));
-      const s = countOf(json(near));
       if (all.status === 503) return ['SEM CHAVE', 'AISSTREAM_API_KEY ausente'];
       if (all.status !== 200 || !n) return ['FALHA', `HTTP ${all.status}`];
       return [
-        s ? 'OK' : 'LIMITADO',
-        `${n} navios no mundo, ${s ?? 0} perto de Santos (AISStream só recebe o que as estações em terra captam)`,
+        'OK',
+        `${n} navios recebidos desde que o servidor ligou (o número cresce com o tempo)`,
       ];
     },
   ],
@@ -365,7 +361,7 @@ const LAYERS = [
         ? ['OK', 'vias + fluxo ao vivo TomTom']
         : [
             'SEM CHAVE',
-            'mostra as vias, mas o fluxo é SIMULADO: falta TOMTOM_API_KEY (grátis, 2.500 pedidos/dia)',
+            'mostra as vias, mas o fluxo é SIMULADO: falta TOMTOM_API_KEY (plano gratuito da TomTom)',
           ];
     },
   ],
