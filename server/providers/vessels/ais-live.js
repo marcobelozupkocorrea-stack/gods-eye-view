@@ -8,6 +8,7 @@ import {
   AISSTREAM_STALE_MS,
   ingestAisStreamEnvelope,
   readAisTrack,
+  readAisVesselDetails,
   aisStreamRows,
   newestAisPositionAt,
 } from './ais-store.js';
@@ -104,6 +105,24 @@ export function aisLiveProxy() {
               source: 'AISStream (accumulated since server start)',
               retainedSec: Math.floor(AISSTREAM_STALE_MS / 1000),
             }),
+          );
+          return;
+        }
+
+        // barreto.top: full record for the pt-BR detail sheet.
+        if (incoming.pathname === '/details') {
+          const mmsi = String(incoming.searchParams.get('mmsi') || '').trim();
+          const ok = /^\d{5,10}$/.test(mmsi);
+          const details = ok ? readAisVesselDetails(mmsi) : null;
+          res.statusCode = !ok ? 400 : details ? 200 : 404;
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-store');
+          res.end(
+            JSON.stringify(
+              details || {
+                error: ok ? 'unknown_mmsi' : 'mmsi query param required',
+              },
+            ),
           );
           return;
         }

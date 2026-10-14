@@ -378,6 +378,55 @@ export function createControls({ state: layerState, services, parts, source }) {
     },
 
     /**
+     * barreto.top: orbital elements of the tracked satellite (from its TLE),
+     * for the pt-BR detail sheet.
+     * @returns {object|null} Plain numbers in km, degrees and minutes.
+     */
+    getTrackedRecord() {
+      if (
+        layerState._trackedNorad === null ||
+        !layerState._catalog.has(layerState._trackedNorad)
+      )
+        return null;
+      const sat = layerState._catalog.get(layerState._trackedNorad);
+      const pos = parts.tracking._getTrackedFramePosition();
+      if (!pos) return null;
+      const info = {
+        noradId: layerState._trackedNorad,
+        name: sat.name.trim(),
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        altitudeM: pos.altitude,
+      };
+      const rec = sat?.satrec;
+      if (!rec) return { ...info, group: sat?.group ?? null };
+      const MU = 398600.4418; // km³/s²
+      const EARTH_KM = 6378.137;
+      const nRadS = rec.no / 60; // rad/min → rad/s
+      const aKm = Math.cbrt(MU / (nRadS * nRadS));
+      const deg = (r) => (r * 180) / Math.PI;
+      const rKm = EARTH_KM + info.altitudeM / 1000;
+      const epochYear =
+        rec.epochyr < 57 ? 2000 + rec.epochyr : 1900 + rec.epochyr;
+      return {
+        ...info,
+        group: sat.group ?? null,
+        inclinationDeg: deg(rec.inclo),
+        eccentricity: rec.ecco,
+        periodMin: (2 * Math.PI) / rec.no,
+        apogeeKm: aKm * (1 + rec.ecco) - EARTH_KM,
+        perigeeKm: aKm * (1 - rec.ecco) - EARTH_KM,
+        semiMajorAxisKm: aKm,
+        raanDeg: deg(rec.nodeo),
+        argPerigeeDeg: deg(rec.argpo),
+        bstar: rec.bstar,
+        speedKmS: Math.sqrt(MU * (2 / rKm - 1 / aKm)),
+        tleEpochMs:
+          Date.UTC(epochYear, 0, 1) + (rec.epochdays - 1) * 86_400_000,
+      };
+    },
+
+    /**
      * Runtime params (DataLayerManager.setLayerParams path).
      * catalog: 'core' (default, ~840 sats) | 'dense' (adds the Starlink shell
      * as points-only extras on a relaxed propagation budget).

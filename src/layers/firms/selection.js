@@ -186,6 +186,8 @@ export function createSelection({
     // the sprite renders at.
     fire.contextEntity.__localBaseCartesian =
       components.model.firePosition(fire);
+    // barreto.top: the pt-BR detail sheet reads the full detection from here.
+    fire.contextEntity.__barretoFire = fire;
     registerEntityContext(fire.contextEntity, {
       id: recordId,
       layerId: id,

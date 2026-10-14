@@ -846,6 +846,22 @@ export function createQueries({
     },
 
     /**
+     * barreto.top: everything stored for the tracked aircraft (raw feed
+     * fields plus the live descriptor), for the pt-BR detail sheet.
+     * @returns {object|null} Detached copy, or null when nothing is tracked.
+     */
+    getTrackedRecord() {
+      const icao24 = flightState._trackedIcao;
+      if (!icao24) return null;
+      const full = _describeFlight(icao24);
+      if (!full) return null;
+      const { position, ...described } = full;
+      const info = flightState.records.data.get(icao24) || {};
+      const { route, ...raw } = info;
+      return { ...raw, ...described, icao24 };
+    },
+
+    /**
      * Return the current aircraft as a Context subject without changing
      * tracking or camera ownership.
      * @returns {{layerId: string, id: string, label: string, position: Cesium.Cartesian3}|null}

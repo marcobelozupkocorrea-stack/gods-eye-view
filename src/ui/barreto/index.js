@@ -6,6 +6,7 @@
 import { initBrasilPanel } from './brasilPanel.js';
 import { installBrazilCities, translateChrome } from './chrome.js';
 import { installQuietCredits } from './credits.js';
+import { initDetailsSheet } from './details.js';
 import { initHelp } from './help.js';
 import { installSessionWatch } from './session.js';
 import { initWelcome } from './welcome.js';
@@ -21,6 +22,7 @@ export function initBarretoExperience({ styleManager, dataManager } = {}) {
   installBrazilCities({ styleManager, signal });
   installQuietCredits({ signal });
   installSessionWatch({ signal });
+  initDetailsSheet({ dataManager, signal });
   const help = initHelp({ signal });
   const brasilPanel = initBrasilPanel({ styleManager, dataManager, signal });
   initWelcome({ styleManager, dataManager, brasilPanel, help, signal });

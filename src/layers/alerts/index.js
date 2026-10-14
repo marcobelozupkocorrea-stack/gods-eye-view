@@ -95,14 +95,32 @@ export function createCapAlertsLayer({
   const canSelect = () =>
     overlayHost && screenSpaceEventHandlerFactory && picking;
 
+  /** barreto.top: tell the pt-BR detail sheet which record is selected. */
+  let _announcedId = null;
+  function announceSelection(row) {
+    const id = row ? String(row.stableId ?? _selectedId) : null;
+    if (!row && _announcedId === null) return;
+    _announcedId = id;
+    globalThis.dispatchEvent?.(
+      new CustomEvent(
+        row ? 'barreto:record-selected' : 'barreto:record-cleared',
+        {
+          detail: { layerId: layer.id, id, record: row ? { ...row } : null },
+        },
+      ),
+    );
+  }
+
   function publishSelectedCard() {
     if (!canSelect()) return;
     const row = _selectedId ? _rowById.get(_selectedId) : null;
     if (!row) {
       _selectedId = null;
       overlayHost.setEntries(OVERLAY_ID, [], CARD_HOST_OPTIONS);
+      announceSelection(null);
       return;
     }
+    announceSelection(row);
     overlayHost.setEntries(
       OVERLAY_ID,
       [

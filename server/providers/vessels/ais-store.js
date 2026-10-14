@@ -12,6 +12,13 @@ const AIS_TRACK_MIN_MOVE_M = 25;
 const _aisStreamVessels = new Map();
 /** @type {Map<string,object>} */
 const _aisStreamStatic = new Map();
+/**
+ * barreto.top: AIS fields the map rows do not carry (call sign, size, draught,
+ * ETA, navigational status…), kept per MMSI for /api/vessels/details.
+ * @type {Map<string,object>}
+ */
+const _aisStreamExtras = new Map();
+const AIS_EXTRAS_MAX = AISSTREAM_CACHE_MAX * 2;
 /** @type {Map<string,{lats:Float32Array,lons:Float32Array,times:Uint32Array,head:number,len:number}>} mmsi -> track ring buffer */
 const _aisStreamTracks = new Map();
 /** @type {Map<string,{lat:number,lon:number,epochSec:number}>} mmsi -> first fix awaiting second (lazy buffer allocation) */
@@ -41,6 +48,8 @@ export function ingestAisStreamEnvelope(envelope) {
     metadata.MMSI ?? message.UserID ?? message.UserId ?? message.Mmsi,
   );
   if (!mmsi) return false;
+
+  recordAisExtras(mmsi, messageType, message);
 
   if (messageType === 'ShipStaticData' || messageType === 'StaticDataReport') {
     const staticData = {
@@ -186,6 +195,79 @@ function approxMetersBetween(lat1, lon1, lat2, lon2) {
   const dLon =
     (lon2 - lon1) * 111320 * Math.cos(((lat1 + lat2) / 2) * (Math.PI / 180));
   return Math.hypot(dLat, dLon);
+}
+
+const NAV_STATUS = Object.freeze({
+  0: 'Navegando com motor',
+  1: 'Fundeado',
+  2: 'Sem governo',
+  3: 'Manobrabilidade restrita',
+  4: 'Restrito pelo calado',
+  5: 'Atracado',
+  6: 'Encalhado',
+  7: 'Pescando',
+  8: 'Navegando a vela',
+  14: 'AIS-SART (emergência)',
+});
+
+function recordAisExtras(mmsi, messageType, message) {
+  const previous = _aisStreamExtras.get(mmsi) || {};
+  const next = { ...previous };
+  const dims = message.Dimension ?? message.ReportB?.Dimension;
+  if (dims && [dims.A, dims.B, dims.C, dims.D].some((v) => Number(v) > 0)) {
+    next.lengthM = (Number(dims.A) || 0) + (Number(dims.B) || 0);
+    next.beamM = (Number(dims.C) || 0) + (Number(dims.D) || 0);
+  }
+  const callSign = stringValue(message.CallSign ?? message.ReportB?.CallSign);
+  if (callSign) next.callSign = callSign;
+  const draught = numberValue(message.MaximumStaticDraught);
+  if (Number.isFinite(draught) && draught > 0) next.draughtM = draught;
+  const eta = message.Eta;
+  if (
+    eta &&
+    Number(eta.Month) >= 1 &&
+    Number(eta.Month) <= 12 &&
+    Number(eta.Day) >= 1
+  )
+    next.eta = {
+      month: Number(eta.Month),
+      day: Number(eta.Day),
+      hour: Number(eta.Hour) < 24 ? Number(eta.Hour) : null,
+      minute: Number(eta.Minute) < 60 ? Number(eta.Minute) : null,
+    };
+  const vendor = stringValue(message.ReportB?.VendorIDName);
+  if (vendor) next.vendor = vendor;
+  if (Number.isFinite(Number(message.NavigationalStatus))) {
+    next.navStatusCode = Number(message.NavigationalStatus);
+    next.navStatus = NAV_STATUS[next.navStatusCode] ?? null;
+  }
+  const rot = numberValue(message.RateOfTurn);
+  if (Number.isFinite(rot) && Math.abs(rot) <= 126) next.rateOfTurn = rot;
+  if (typeof message.PositionAccuracy === 'boolean')
+    next.highAccuracy = message.PositionAccuracy;
+  if (/ClassB|StaticDataReport/.test(messageType)) next.aisClass = 'B';
+  else if (/^(PositionReport|ShipStaticData)$/.test(messageType))
+    next.aisClass = 'A';
+  next.lastMessageType = messageType;
+  _aisStreamExtras.delete(mmsi);
+  _aisStreamExtras.set(mmsi, next);
+  if (_aisStreamExtras.size > AIS_EXTRAS_MAX)
+    _aisStreamExtras.delete(_aisStreamExtras.keys().next().value);
+}
+
+/**
+ * barreto.top: everything known about one vessel (map row + static extras).
+ * @param {string} mmsi Vessel MMSI.
+ * @returns {object|null} Detached record, or null when never seen.
+ */
+export function readAisVesselDetails(mmsi) {
+  const key = String(mmsi);
+  const live = _aisStreamVessels.get(key);
+  const staticData = _aisStreamStatic.get(key);
+  const extras = _aisStreamExtras.get(key);
+  if (!live && !staticData && !extras) return null;
+  const { _updatedAt, ...row } = live || {};
+  return { mmsi: key, ...(staticData || {}), ...row, ...(extras || {}) };
 }
 
 function mergeAisStaticIntoLiveVessel(mmsi, staticData) {

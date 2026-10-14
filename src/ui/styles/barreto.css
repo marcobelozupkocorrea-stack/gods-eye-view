@@ -672,3 +672,234 @@ html[lang^='pt'] #location-bar-divider {
   border-radius: 8px;
   cursor: pointer;
 }
+
+/* ---------- "Detalhes" sheet (src/ui/barreto/details.js) ---------- */
+#barreto-details {
+  --details-accent: var(--accent);
+  position: fixed;
+  z-index: 160;
+  top: 84px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: min(380px, calc(100vw - 32px));
+  max-height: calc(100dvh - 84px - 128px);
+  overflow-y: auto;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  background: linear-gradient(
+    160deg,
+    rgba(10, 24, 34, 0.97),
+    rgba(6, 12, 20, 0.96)
+  );
+  border: 1px solid rgba(54, 220, 255, 0.35);
+  border-top: 3px solid var(--details-accent);
+  border-radius: 12px;
+  box-shadow: 0 1.2rem 3.5rem rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  opacity: 0;
+  transform: translateX(12px);
+  transition:
+    opacity 180ms ease,
+    transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  scrollbar-width: thin;
+}
+
+#barreto-details[hidden] {
+  display: none;
+}
+
+#barreto-details.visible {
+  opacity: 1;
+  transform: none;
+}
+
+.barreto-details-header {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 12px 10px 14px;
+  background: rgba(8, 18, 27, 0.96);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.barreto-details-icon {
+  flex: 0 0 auto;
+  margin-top: 4px;
+  color: var(--details-accent);
+  font-size: 24px;
+}
+
+.barreto-details-heading {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.barreto-details-kicker {
+  display: block;
+  color: var(--details-accent);
+  font: 600 9.5px var(--font-mono);
+  letter-spacing: 0.18em;
+}
+
+#barreto-details h2 {
+  margin: 2px 0 0;
+  font: 700 17px/1.25 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.barreto-details-subtitle {
+  margin: 3px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.barreto-details-subtitle:empty {
+  display: none;
+}
+
+.barreto-details-close {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.barreto-details-photo {
+  margin: 0;
+  background: #000;
+}
+
+.barreto-details-photo img {
+  display: block;
+  width: 100%;
+  max-height: 210px;
+  object-fit: cover;
+}
+
+.barreto-details-photo figcaption {
+  padding: 4px 12px;
+  color: var(--text-dim);
+  font: 10px var(--font-sans);
+}
+
+.barreto-details-body {
+  padding: 4px 14px 14px;
+}
+
+.barreto-details-alert {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  color: #fff;
+  font: 700 12.5px var(--font-sans);
+  background: rgba(213, 0, 0, 0.35);
+  border: 1px solid rgba(255, 82, 82, 0.8);
+  border-radius: 8px;
+}
+
+.barreto-details-loading {
+  margin: 10px 0 0;
+  color: var(--text-dim);
+  font: 11px var(--font-mono);
+}
+
+.barreto-details-section h3 {
+  margin: 14px 0 6px;
+  color: var(--details-accent);
+  font: 700 10.5px var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.barreto-details-section dl {
+  margin: 0;
+}
+
+.barreto-details-section dl > div {
+  display: grid;
+  grid-template-columns: minmax(96px, 38%) 1fr;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.barreto-details-section dt {
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+
+.barreto-details-section dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 12.5px;
+  line-height: 1.4;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.barreto-details-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.barreto-details-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  color: var(--text-primary);
+  font: 600 11.5px var(--font-sans);
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+}
+
+.barreto-details-links a:hover,
+.barreto-details-links a:focus-visible {
+  border-color: var(--details-accent);
+}
+
+.barreto-details-links .material-symbols-outlined {
+  font-size: 14px;
+}
+
+.barreto-details-note {
+  margin: 12px 0 0;
+  color: var(--text-dim);
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+@media (max-width: 720px) {
+  #barreto-details {
+    top: auto;
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+    width: auto;
+    max-height: 58dvh;
+    z-index: 190;
+    border-radius: 14px;
+    transform: translateY(16px);
+  }
+
+  .barreto-details-photo img {
+    max-height: 160px;
+  }
+}
