@@ -75,7 +75,20 @@ build() {
   curl -fsSL "$REPO/$REF" -o "$tmp.tgz" || return 1
   tar xzf "$tmp.tgz" --strip-components=1 -C "$tmp" || return 1
   rm -f "$tmp.tgz"
-  (cd "$tmp" && npm ci --no-audit --no-fund && npm run build) || return 1
+  cur=$(readlink -f "$REL/current" 2>/dev/null || true)
+  if [ -n "$cur" ] && [ -d "$cur/node_modules" ] &&
+    cmp -s "$cur/package-lock.json" "$tmp/package-lock.json"; then
+    # Same lockfile: reuse the installed packages instead of downloading again.
+    log "pacotes iguais aos da versão atual; reaproveitando"
+    cp -a "$cur/node_modules" "$tmp/" || return 1
+  else
+    log "instalando pacotes"
+    (cd "$tmp" && timeout 900 npm ci --no-audit --no-fund --no-progress </dev/null) ||
+      { log "npm ci falhou ou passou de 15 min"; return 1; }
+  fi
+  log "gerando build"
+  (cd "$tmp" && timeout 900 npm run build </dev/null) ||
+    { log "build falhou ou passou de 15 min"; return 1; }
   chown -R node:node "$tmp" || return 1
   rm -rf "${REL:?}/$WANT"
   mv "$tmp" "$REL/$WANT" || return 1
