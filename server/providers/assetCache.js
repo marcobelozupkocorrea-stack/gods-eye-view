@@ -48,6 +48,8 @@ export function assetCacheHeaders() {
   };
   return {
     name: 'barreto-asset-cache',
+    // The dev server never serves hashed /assets/ files, so this is inert there.
+    configureServer: install,
     configurePreviewServer: install,
   };
 }
