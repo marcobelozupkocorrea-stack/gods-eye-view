@@ -12,7 +12,7 @@
  */
 import http from 'node:http';
 import https from 'node:https';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import zlib from 'node:zlib';
@@ -643,10 +643,19 @@ export async function runLayerCheck(layers = LAYERS) {
   return tally;
 }
 
-if (
-  process.argv[1] &&
-  fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
-) {
+// Run when executed directly. Compare real paths: on the server the script is
+// reached through the releases/current symlink.
+const invokedDirectly = (() => {
+  try {
+    return (
+      realpathSync(process.argv[1]) ===
+      realpathSync(fileURLToPath(import.meta.url))
+    );
+  } catch {
+    return false;
+  }
+})();
+if (invokedDirectly) {
   const tally = await runLayerCheck();
   process.exitCode = tally.FALHA ? 1 : 0;
 }
