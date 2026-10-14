@@ -641,3 +641,34 @@ html[lang^='pt'] #location-bar-divider {
 #cesium-credits.barreto-credits-folded [data-barreto-keep] {
   margin-right: 6px;
 }
+
+/* ---------- Session expired banner (src/ui/barreto/session.js) ---------- */
+#barreto-session {
+  position: fixed;
+  z-index: 450;
+  top: 12px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 24px);
+  padding: 10px 12px 10px 14px;
+  color: var(--text-primary);
+  font: 13px/1.35 var(--font-sans);
+  background: rgba(40, 12, 12, 0.95);
+  border: 1px solid rgba(255, 120, 100, 0.6);
+  border-radius: 10px;
+  box-shadow: 0 0.8rem 2.5rem rgba(0, 0, 0, 0.6);
+  transform: translateX(-50%);
+}
+
+#barreto-session button {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  color: #1a0505;
+  font: 700 12.5px var(--font-sans);
+  background: #ffb4a8;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}

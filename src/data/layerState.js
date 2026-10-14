@@ -1,9 +1,20 @@
 import { normalizeIdSwitches, patchRequestedIdSwitches } from './idSwitches.js';
 import reservationRows from './layerStateTokenReservations.json' with { type: 'json' };
 
-const PT_BR_PAGE = /^pt\b/i.test(
-  globalThis.document?.documentElement?.lang || '',
-);
+// barreto.top: the pt-BR build starts "Nuvens por satélite" on the global
+// mosaic (GOES regional stops north of Brazil). Set once at startup by
+// shareRestoration.js; links keep their historical meaning via absentValue.
+let cloudsProductDefault = 'clouds-regional';
+export function setCloudsProductDefault(value) {
+  if (value === 'clouds' || value === 'clouds-regional')
+    cloudsProductDefault = value;
+}
+function withDynamicDefault(spec, read) {
+  const copy = { ...spec };
+  delete copy.defaultValue;
+  Object.defineProperty(copy, 'defaultValue', { get: read, enumerable: true });
+  return Object.freeze(copy);
+}
 
 const VALID_DISPOSITIONS = new Set([
   'enabled-only',
@@ -329,14 +340,16 @@ const OPTION_GROUPS = Object.freeze({
       light: 'l',
       strong: 's',
     }),
-    enumOption(
-      'product',
-      'p',
-      // barreto.top (pt-BR): GOES regional stops north of Brazil, so the
-      // global mosaic is the useful default there.
-      PT_BR_PAGE ? 'clouds' : 'clouds-regional',
-      ['clouds', 'clouds-regional'],
-      { clouds: 'g', 'clouds-regional': 'r' },
+    withDynamicDefault(
+      enumOption(
+        'product',
+        'p',
+        'clouds-regional',
+        ['clouds', 'clouds-regional'],
+        { clouds: 'g', 'clouds-regional': 'r' },
+        { absentValue: 'clouds-regional' },
+      ),
+      () => cloudsProductDefault,
     ),
   ]),
   wind: Object.freeze([

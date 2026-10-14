@@ -2,7 +2,11 @@ import { LayerStateCoordinator } from '../data/layerStateCoordinator.js';
 import { stampInitialShareGesture } from '../navigationPolicy.js';
 import { canPresentDeferredStatusNotice } from '../loadingFeedback.js';
 import { UiLifetime } from './uiLifetime.js';
-import { firstVisitLayerIds } from './ptBr.js';
+import { firstVisitLayerIds, isPortugueseUi } from './ptBr.js';
+import { setCloudsProductDefault } from '../data/layerState.js';
+
+// barreto.top: pt-BR starts satellite clouds on the global mosaic.
+if (isPortugueseUi()) setCloudsProductDefault('clouds');
 
 /** Own initial share restoration, durable layer state and restoration notices. */
 export class ShareRestoration {
