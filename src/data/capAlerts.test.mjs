@@ -122,3 +122,40 @@ test('Defesa Civil card credits the issuing state and strips the prefix', () => 
   assert.equal(card.details.at(-1), 'Fonte: Defesa Civil Estadual de Goiás');
   assert.equal(card.id, 'defesa-civil-card:193467/2026');
 });
+
+test('Defesa Civil proxy retries the intermittent 503 from IDAP', async () => {
+  const { defesaCivilAlertsProxy } =
+    await import('../../server/providers/defesaCivilAlerts.js');
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls += 1;
+    if (calls < 3) return new Response('busy', { status: 503 });
+    return new Response(FEED, { headers: { 'Content-Type': 'text/xml' } });
+  };
+  const plugin = defesaCivilAlertsProxy({
+    fetchImpl,
+    retryDelayMs: 1,
+    now: () => Date.parse('2026-10-13T12:00:00-03:00'),
+  });
+  let handler;
+  plugin.configurePreviewServer({
+    middlewares: { use: (_p, fn) => (handler = fn) },
+  });
+  const result = await new Promise((resolve) =>
+    handler(
+      { url: '/', method: 'GET' },
+      {
+        headersSent: false,
+        writeHead(s) {
+          this.s = s;
+        },
+        end(b) {
+          resolve({ status: this.s, body: JSON.parse(b) });
+        },
+      },
+    ),
+  );
+  assert.equal(calls, 3);
+  assert.equal(result.status, 200);
+  assert.equal(result.body.rows.length, 1, 'only the alert still in force');
+});

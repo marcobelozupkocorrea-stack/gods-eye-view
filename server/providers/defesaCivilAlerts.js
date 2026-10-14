@@ -25,21 +25,32 @@ const RING_BUDGET = 250;
 export function defesaCivilAlertsProxy({
   fetchImpl = (...args) => globalThis.fetch(...args),
   now = () => Date.now(),
+  retries = 4,
+  retryDelayMs = 5_000,
 } = {}) {
   let snapshot = null;
   let inflight = null;
 
-  async function refresh() {
-    const signal = AbortSignal.timeout(90_000);
-    const response = await fetchImpl(FEED_URL, {
-      signal,
-      redirect: 'error',
-      headers: { Accept: 'application/atom+xml, application/xml, */*' },
-    });
-    if (!response.ok) {
+  /** The IDAP host intermittently answers 502/503/504; retry those. */
+  async function fetchFeed(signal) {
+    for (let attempt = 1; ; attempt += 1) {
+      const response = await fetchImpl(FEED_URL, {
+        signal,
+        redirect: 'error',
+        headers: { Accept: 'application/atom+xml, application/xml, */*' },
+      });
+      if (response.ok) return response;
       await response.body?.cancel();
-      throw new Error(`HTTP ${response.status}`);
+      if (attempt >= retries || ![502, 503, 504].includes(response.status))
+        throw new Error(`HTTP ${response.status}`);
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
     }
+  }
+
+  async function refresh() {
+    // The national feed is ~20+ MB and can take a minute to download.
+    const signal = AbortSignal.timeout(180_000);
+    const response = await fetchFeed(signal);
     const xml = await readResponseTextCapped(response, FEED_CAP_BYTES, signal);
     const at = now();
     const seen = new Set();
