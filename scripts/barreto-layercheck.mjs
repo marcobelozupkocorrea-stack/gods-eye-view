@@ -261,10 +261,13 @@ function weatherCheck(product, label) {
         `imagem HTTP ${image.status} ${image.body.toString('utf8').slice(0, 120)}`,
       ];
     const coverage = pngCoverage(image.body);
+    // Partial means the product itself stops short of Brazil, not that the
+    // 2:1 test window does.
     const partial =
-      box[1] > BRAZIL.south + 1 ||
-      box[3] < BRAZIL.north - 1 ||
-      box[0] > BRAZIL.west + 1;
+      b.south > BRAZIL.south + 1 ||
+      b.north < BRAZIL.north - 1 ||
+      b.west > BRAZIL.west + 1 ||
+      b.east < BRAZIL.east - 1;
     const detail = `${label}: imagem de há ${age} min sobre o Brasil, ${coverage == null ? `${Math.round(image.body.length / 1024)} KB` : `${pct(coverage)} da área com dados`}; ${extent}`;
     return [
       partial ? 'LIMITADO' : 'OK',
