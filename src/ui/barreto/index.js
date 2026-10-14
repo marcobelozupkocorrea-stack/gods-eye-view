@@ -5,6 +5,7 @@
  */
 import { initBrasilPanel } from './brasilPanel.js';
 import { installBrazilCities, translateChrome } from './chrome.js';
+import { installQuietCredits } from './credits.js';
 import { initHelp } from './help.js';
 import { initWelcome } from './welcome.js';
 
@@ -17,6 +18,7 @@ export function initBarretoExperience({ styleManager, dataManager } = {}) {
     console.warn('[barreto] chrome labels:', error);
   }
   installBrazilCities({ styleManager, signal });
+  installQuietCredits({ signal });
   const help = initHelp({ signal });
   const brasilPanel = initBrasilPanel({ styleManager, dataManager, signal });
   initWelcome({ styleManager, dataManager, brasilPanel, help, signal });

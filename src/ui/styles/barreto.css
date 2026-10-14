@@ -587,3 +587,57 @@ html[lang^='pt'] #location-bar-divider {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Quieter map attribution (see src/ui/barreto/credits.js) ----------
+   Full line at start; folded to logos + "Créditos" after a few seconds.
+   Cesium ion, Google and Esri credits never hide (their terms require them). */
+#cesium-credits.barreto-credits {
+  font-size: 9.5px;
+  opacity: 0.75;
+  transition: opacity 200ms ease;
+  cursor: default;
+}
+
+#cesium-credits.barreto-credits:hover,
+#cesium-credits.barreto-credits:focus-within {
+  opacity: 1;
+}
+
+#cesium-credits.barreto-credits .cesium-credit-logoContainer img {
+  max-height: 16px;
+  width: auto;
+}
+
+#cesium-credits.barreto-credits .cesium-credit-textContainer img {
+  max-height: 12px;
+  width: auto;
+  vertical-align: middle;
+}
+
+#cesium-credits.barreto-credits-folded {
+  opacity: 0.5;
+}
+
+#cesium-credits.barreto-credits-folded
+  .cesium-credit-textContainer
+  > :not([data-barreto-keep]) {
+  display: none !important;
+}
+
+#cesium-credits.barreto-credits-folded .cesium-credit-expand-link {
+  margin-left: 6px;
+}
+
+@media (max-width: 720px) {
+  #cesium-credits.barreto-credits {
+    font-size: 8.5px;
+  }
+
+  #cesium-credits.barreto-credits .cesium-credit-logoContainer img {
+    max-height: 13px;
+  }
+}
+
+#cesium-credits.barreto-credits-folded [data-barreto-keep] {
+  margin-right: 6px;
+}

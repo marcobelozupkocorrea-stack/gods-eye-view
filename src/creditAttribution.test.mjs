@@ -605,12 +605,18 @@ test('the tray only spans the credit corner at the widths the model covers', () 
 });
 
 test('the credit line is never suppressed to make room', () => {
-  const creditBlocks = [...css.matchAll(/#cesium-credits[^{]*\{([^}]*)\}/g)].map((m) => m[1]);
+  const creditBlocks = [...css.matchAll(/(#cesium-credits[^{]*)\{([^}]*)\}/g)];
   assert.ok(creditBlocks.length > 0);
-  for (const block of creditBlocks) {
+  // barreto.top folds the plain-text credits after the opening seconds; the
+  // logos (Cesium ion, Google) and the "Créditos" link that lists every source
+  // are marked data-barreto-keep / left alone and never hide.
+  const FOLDED_TEXT_ONLY = /\.barreto-credits-folded\s+\.cesium-credit-textContainer\s*>\s*:not\(\[data-barreto-keep\]\)\s*$/;
+  for (const [, selector, block] of creditBlocks) {
+    if (FOLDED_TEXT_ONLY.test(selector.trim())) continue;
     assert.doesNotMatch(block, /display\s*:\s*none/, 'the credit must never be display:none');
     assert.doesNotMatch(block, /visibility\s*:\s*hidden/, 'the credit must never be hidden');
-    assert.doesNotMatch(block, /opacity\s*:\s*0(\D|$)/, 'the credit must never be faded out');
+    assert.doesNotMatch(block, /opacity\s*:\s*0(?![.\d])/, 'the credit must never be faded out');
+    assert.doesNotMatch(block, /opacity\s*:\s*0?\.[0-3]\d*/, 'the credit must stay legible');
   }
   assert.match(css, /body\.ui-clean-view #cesium-credits,\s*\n\s*body\.recording-mode #cesium-credits \{[^}]*bottom: 36px;/);
 });

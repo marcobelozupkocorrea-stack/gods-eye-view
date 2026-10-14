@@ -2241,7 +2241,8 @@
       "src/ui/barreto/welcome.js",
       "src/ui/barreto/brasilFeed.js",
       "src/ui/barreto/brasilPanel.js",
-      "src/ui/barreto/index.js"
+      "src/ui/barreto/index.js",
+      "src/ui/barreto/credits.js"
     ],
     "external": [
       "hls.js",
