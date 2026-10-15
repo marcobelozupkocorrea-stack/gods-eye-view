@@ -45,7 +45,7 @@ export const WELCOME_MISSIONS = Object.freeze([
   Object.freeze({
     id: 'brasil',
     icon: 'warning',
-    title: 'BRASIL AGORA',
+    title: 'Alertas do Brasil',
     text: 'Alertas de tempo, Defesa Civil, Cemaden e queimadas, com a lista para filtrar',
     layers: [
       'local-firms',

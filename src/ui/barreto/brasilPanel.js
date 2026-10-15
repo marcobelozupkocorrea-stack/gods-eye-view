@@ -14,6 +14,11 @@ import {
   sortBrasilItems,
   toBrasilItems,
 } from './brasilFeed.js';
+import {
+  createHistoryView,
+  createNearCard,
+  createPlacesView,
+} from './alertsViews.js';
 
 export const BRASIL_PANEL_ID = 'brasil-panel';
 const PAGE = 30;
@@ -31,7 +36,32 @@ const el = (tag, attrs = {}, children = []) => {
   return node;
 };
 
-export function initBrasilPanel({ styleManager, dataManager, signal } = {}) {
+const CACHE_KEY = 'barreto:alertas-cache:v1';
+const readCache = () => {
+  try {
+    const v = JSON.parse(globalThis.localStorage?.getItem(CACHE_KEY) || 'null');
+    return v && Array.isArray(v.items) ? v : null;
+  } catch {
+    return null;
+  }
+};
+const writeCache = (items) => {
+  try {
+    globalThis.localStorage?.setItem(
+      CACHE_KEY,
+      JSON.stringify({ at: Date.now(), items: items.slice(0, 400) }),
+    );
+  } catch {
+    /* storage full or off */
+  }
+};
+
+export function initBrasilPanel({
+  styleManager,
+  dataManager,
+  notify,
+  signal,
+} = {}) {
   const panel = document.getElementById(BRASIL_PANEL_ID);
   const body = document.getElementById('brasil-panel-body');
   if (!panel || !body) return null;
@@ -92,7 +122,79 @@ export function initBrasilPanel({ styleManager, dataManager, signal } = {}) {
     text: 'Mostrar mais',
     hidden: true,
   });
-  body.replaceChildren(intro, chips, filters, status, list, more);
+  // Tabs: the live list, the same alerts grouped by state/city, history.
+  const near = createNearCard({ styleManager, signal });
+  const places = createPlacesView({ styleManager, signal });
+  const history = createHistoryView({ signal });
+  const nowView = el('section', { className: 'al-now' }, [
+    intro,
+    chips,
+    filters,
+    status,
+    list,
+    more,
+  ]);
+  const tabs = el('div', {
+    className: 'al-tabs',
+    role: 'tablist',
+    'aria-label': 'Ver alertas',
+  });
+  const TABS = [
+    ['agora', 'Agora'],
+    ['lugar', 'Lugares'],
+    ['historico', 'Histórico'],
+  ];
+  let tab = 'agora';
+  function setTab(next) {
+    tab = next;
+    for (const b of tabs.children)
+      b.setAttribute('aria-selected', String(b.dataset.tab === tab));
+    nowView.hidden = tab !== 'agora';
+    if (tab === 'lugar') places.show();
+    else places.hide();
+    if (tab === 'historico') history.show();
+    else history.hide();
+  }
+  for (const [id, label] of TABS) {
+    const b = el('button', {
+      type: 'button',
+      role: 'tab',
+      className: 'al-tab',
+      'data-tab': id,
+      'aria-selected': String(id === tab),
+      text: label,
+    });
+    b.addEventListener('click', () => setTab(id));
+    tabs.append(b);
+  }
+  const bell = el(
+    'button',
+    {
+      type: 'button',
+      className: 'al-bell',
+      title: 'Notificações de alertas',
+      'aria-label': 'Notificações de alertas',
+    },
+    [
+      el('span', {
+        className: 'material-symbols-outlined',
+        'aria-hidden': 'true',
+        text: 'notifications',
+      }),
+      el('span', { text: 'Notificações' }),
+    ],
+  );
+  bell.addEventListener('click', () => notify?.open?.());
+  const offline = el('p', { className: 'al-offline', hidden: true });
+  body.replaceChildren(
+    el('div', { className: 'al-top' }, [tabs, bell]),
+    near.el,
+    offline,
+    nowView,
+    places.el,
+    history.el,
+  );
+  const cached = readCache();
 
   const isOpen = () => !panel.classList.contains('collapsed');
 
@@ -149,13 +251,25 @@ export function initBrasilPanel({ styleManager, dataManager, signal } = {}) {
   const loadSelected = (options) =>
     Promise.all([...state.sources].map((key) => load(key, options)));
 
+  let lastCacheWrite = 0;
   function render() {
-    const all = toBrasilItems({
+    const live = Object.keys(state.rows).length > 0;
+    let all = toBrasilItems({
       inmet: state.rows.inmet,
       defesa: state.rows.defesa,
       cemaden: state.rows.cemaden,
       deter: state.rows.deter,
     });
+    // Offline (or every source failed): show the last list this device saw.
+    const useCache = !live && cached && state.errors.size > 0;
+    if (useCache) all = cached.items;
+    offline.hidden = !useCache;
+    if (useCache)
+      offline.textContent = `Sem conexão: mostrando a lista de ${formatWhen(cached.at)}.`;
+    if (live && Date.now() - lastCacheWrite > 60_000) {
+      lastCacheWrite = Date.now();
+      writeCache(all);
+    }
     const counts = countBySource(all);
     updateBadge(all);
     chips.replaceChildren(
@@ -353,6 +467,42 @@ export function initBrasilPanel({ styleManager, dataManager, signal } = {}) {
   if (isOpen()) void loadSelected();
   render();
 
+  // Refresh the "near you" card with the list.
+  const nearTimer = setInterval(() => {
+    if (isOpen()) void near.refresh();
+  }, REFRESH_MS);
+  signal?.addEventListener('abort', () => clearInterval(nearTimer));
+  let nearLoaded = false;
+  const nearObserver = new MutationObserver(() => {
+    if (isOpen() && !nearLoaded) {
+      nearLoaded = true;
+      void near.refresh();
+    }
+  });
+  nearObserver.observe(panel, { attributes: true, attributeFilter: ['class'] });
+  signal?.addEventListener('abort', () => nearObserver.disconnect());
+  if (isOpen()) {
+    nearLoaded = true;
+    void near.refresh();
+  }
+
+  /** Open an alert by its hub id ("defesa:…", "inmet:…", "cemaden:…"). */
+  async function focusAlert(id) {
+    setTab('agora');
+    for (let i = 0; i < 40 && !signal?.aborted; i += 1) {
+      const all = toBrasilItems({
+        inmet: state.rows.inmet,
+        defesa: state.rows.defesa,
+        cemaden: state.rows.cemaden,
+      });
+      const item = all.find((x) => x.key === id);
+      if (item) return focusItem(item);
+      if (i === 0) void loadSelected();
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    return null;
+  }
+
   return {
     open() {
       styleManager?.setPanelCollapsed?.(BRASIL_PANEL_ID, false, {
@@ -360,6 +510,13 @@ export function initBrasilPanel({ styleManager, dataManager, signal } = {}) {
       });
       void loadSelected();
     },
-    refresh: () => loadSelected({ force: true }),
+    refresh: () => {
+      void near.refresh();
+      places.refresh();
+      history.refresh();
+      return loadSelected({ force: true });
+    },
+    focusAlert,
+    showTab: setTab,
   };
 }

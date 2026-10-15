@@ -2258,7 +2258,15 @@
       "src/ui/barreto/routePlanner.js",
       "src/ui/barreto/pwa.js",
       "src/ui/barreto/appShellLogic.js",
-      "src/ui/barreto/appShell.js"
+      "src/ui/barreto/appShell.js",
+      "src/ui/barreto/navigation.js",
+      "src/ui/barreto/savedViews.js",
+      "src/ui/barreto/shareTarget.js",
+      "src/ui/barreto/notifySettings.js",
+      "src/ui/barreto/timeline.js",
+      "src/ui/barreto/alertsApi.js",
+      "src/ui/barreto/alertsViews.js",
+      "src/ui/barreto/mapMenu.js"
     ],
     "external": [
       "hls.js",

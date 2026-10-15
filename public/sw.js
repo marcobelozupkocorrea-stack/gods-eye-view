@@ -140,3 +140,48 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(staleWhileRevalidate(event, ENGINE, 400));
   }
 });
+
+// ---------------------------------------------------------------- alerts
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : '' };
+  }
+  const extreme = Number(data.rank) >= 3;
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Barreto', {
+      body: data.body || '',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/badge-96.png',
+      tag: data.tag || undefined,
+      renotify: !!data.tag,
+      requireInteraction: extreme,
+      vibrate: extreme ? [250, 120, 250, 120, 500] : [150, 80, 150],
+      lang: 'pt-BR',
+      data: { url: data.url || '/' },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url || '/', self.location.origin)
+    .href;
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true,
+      });
+      for (const client of windows) {
+        if (new URL(client.url).origin !== self.location.origin) continue;
+        await client.focus();
+        client.postMessage({ type: 'barreto:open', url });
+        return;
+      }
+      await self.clients.openWindow(url);
+    })(),
+  );
+});

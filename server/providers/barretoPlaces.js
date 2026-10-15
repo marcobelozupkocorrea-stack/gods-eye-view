@@ -199,6 +199,21 @@ export function barretoDataDir(cwd = process.cwd()) {
   return m ? path.join(m[1], 'data') : path.join(cwd, '.gev-cache', 'barreto');
 }
 
+/** Keep only well-formed saved views (max 20): name + share-link hash. */
+export function cleanViews(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const v of list) {
+    const name = typeof v?.name === 'string' ? v.name.trim().slice(0, 40) : '';
+    const hash = typeof v?.hash === 'string' ? v.hash.replace(/^#/, '') : '';
+    if (!name || !hash || hash.length > 4000) continue;
+    if (!/^[\w%=&.,:~+\-|!*()';/@$]+$/.test(hash)) continue;
+    out.push({ name, hash, at: Number.isFinite(v.at) ? v.at : Date.now() });
+    if (out.length >= 20) break;
+  }
+  return out;
+}
+
 /** Keep only well-formed favourites (max 30). */
 export function cleanFavorites(list) {
   if (!Array.isArray(list)) return [];
@@ -346,7 +361,7 @@ export function barretoPlacesProxy({
     res.end(JSON.stringify(body));
   }
 
-  async function handler(req, res) {
+  async function handler(req, res, next) {
     try {
       const url = new URL(req.url, 'http://localhost');
       if (url.pathname === '/search') {
@@ -367,6 +382,69 @@ export function barretoPlacesProxy({
           searches.set(key, results);
         }
         return json(res, 200, { results });
+      }
+      if (url.pathname === '/link') {
+        // Follow a short map link (maps.app.goo.gl, Waze) to the full URL,
+        // which carries the coordinates. Only these hosts, a few hops.
+        let target = String(url.searchParams.get('u') || '').slice(0, 600);
+        const allowed =
+          /^https:\/\/(?:maps\.app\.goo\.gl|goo\.gl|g\.co|(?:www\.)?waze\.com|(?:www\.|maps\.)?google\.[a-z.]+|consent\.google\.com)\//i;
+        if (!allowed.test(target))
+          return json(res, 400, { error: 'host' }, 'no-store');
+        for (let hop = 0; hop < 6; hop += 1) {
+          const r = await fetchImpl(target, {
+            redirect: 'manual',
+            signal: AbortSignal.timeout(8_000),
+            headers: { 'User-Agent': 'Mozilla/5.0 (barreto.top link preview)' },
+          });
+          await r.body?.cancel?.();
+          const next = r.headers.get('location');
+          if (!next || r.status < 300 || r.status >= 400) break;
+          const resolved = new URL(next, target).href;
+          // Google's cookie wall keeps the real address in "continue".
+          const cont = /consent\.google\./.test(resolved)
+            ? new URL(resolved).searchParams.get('continue')
+            : null;
+          target = cont || resolved;
+          if (!allowed.test(target)) break;
+        }
+        return json(res, 200, { url: target }, 'private, max-age=3600');
+      }
+      if (url.pathname === '/views') {
+        const email = String(req.headers?.['x-auth-request-email'] || 'local')
+          .trim()
+          .toLowerCase();
+        const file = path.join(
+          dataDir,
+          'views',
+          `${createHash('sha256').update(email).digest('hex').slice(0, 32)}.json`,
+        );
+        if (req.method === 'PUT' || req.method === 'POST') {
+          let body = '';
+          for await (const chunk of req) {
+            body += chunk;
+            if (body.length > 131_072)
+              return json(res, 413, { error: 'too_large' }, 'no-store');
+          }
+          let views;
+          try {
+            views = cleanViews(JSON.parse(body)?.views);
+          } catch {
+            return json(res, 400, { error: 'invalid_json' }, 'no-store');
+          }
+          await fsp.mkdir(path.dirname(file), { recursive: true });
+          await fsp.writeFile(file, JSON.stringify({ views }), 'utf8');
+          return json(res, 200, { views }, 'no-store');
+        }
+        let views = [];
+        try {
+          views = cleanViews(
+            JSON.parse(await fsp.readFile(file, 'utf8')).views,
+          );
+        } catch {
+          /* none saved yet */
+        }
+        return json(res, 200, { views }, 'no-store');
       }
       if (url.pathname === '/favorites') {
         const email = String(req.headers?.['x-auth-request-email'] || 'local')
@@ -453,6 +531,8 @@ export function barretoPlacesProxy({
         }
         return json(res, 200, record, 'private, max-age=3600');
       }
+      // Other /api/br routes (alerts, notifications) live in their own plugins.
+      if (typeof next === 'function') return next();
       return json(res, 404, { error: 'not_found' });
     } catch (error) {
       console.warn('[br-places]', error?.message || error);

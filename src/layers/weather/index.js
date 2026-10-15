@@ -487,6 +487,30 @@ export function createWeatherLayer({
       }
       notify();
     },
+    /** Timeline: show the frame at (or just before) an ISO time; null = latest. */
+    seekTime(iso) {
+      if (!enabled) return false;
+      if (clock) {
+        if (iso) void clock.setTarget(iso);
+        else void clock.latest();
+        return true;
+      }
+      if (!manifest?.times?.length) return false;
+      stop();
+      if (!iso) {
+        followLatest = true;
+        void show(manifest.latest);
+      } else {
+        const at = Date.parse(iso);
+        const time =
+          manifest.times.filter((t) => Date.parse(t) <= at).at(-1) ??
+          manifest.times[0];
+        followLatest = false;
+        void show(time);
+      }
+      notify();
+      return true;
+    },
     getParams() {
       return radar
         ? { opacity }

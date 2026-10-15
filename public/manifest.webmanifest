@@ -102,5 +102,14 @@
       "form_factor": "narrow",
       "label": "Estilos do mapa, cidades e painéis"
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "compartilhado_titulo",
+      "text": "compartilhado_texto",
+      "url": "compartilhado_link"
+    }
+  }
 }

@@ -19,6 +19,9 @@
  */
 import { flyToBrazil } from '../../camera.js';
 import { BRAZIL_CITIES } from './chrome.js';
+import { searchPlaces } from './places.js';
+import { mountViewsList } from './savedViews.js';
+import { SHARE_PARAMS, parseShared, sharedFromUrl } from './shareTarget.js';
 import { badgeCount, isNewerBuild, sheetSnap } from './appShellLogic.js';
 
 export { badgeCount, isNewerBuild, sheetSnap };
@@ -62,6 +65,8 @@ export function initAppShell({
   routePlanner,
   searchBar,
   help,
+  notify,
+  timeline,
   signal,
 } = {}) {
   const viewer = () => styleManager?.viewer || null;
@@ -127,6 +132,8 @@ export function initAppShell({
         <button type="button" class="barreto-chip" data-go="globo">${icon('public')}Planeta</button>
         ${BRAZIL_CITIES.map(([name], i) => `<button type="button" class="barreto-chip" data-city="${i}">${name}</button>`).join('')}
       </div>
+      <h2 class="barreto-more-h">Minhas visões</h2>
+      <div class="barreto-more-views"></div>
       <h2 class="barreto-more-h">Painéis</h2>
       <div class="barreto-more-grid barreto-more-panels"></div>
       <h2 class="barreto-more-h">Ações</h2>
@@ -135,6 +142,8 @@ export function initAppShell({
         <button type="button" data-act="clear">${icon('layers_clear')}<span>Desligar todas as camadas</span></button>
         <button type="button" data-act="refresh">${icon('refresh')}<span>Atualizar alertas</span></button>
         <button type="button" data-act="install" hidden>${icon('install_mobile')}<span>Instalar o app</span></button>
+        <button type="button" data-act="timeline">${icon('history')}<span>Linha do tempo (3 h)</span></button>
+        <button type="button" data-act="notify">${icon('notifications')}<span>Notificações de alertas</span></button>
         <button type="button" data-act="help">${icon('help')}<span>Como usar</span></button>
         <button type="button" data-act="reload">${icon('restart_alt')}<span>Recarregar o app</span></button>
         <a href="/oauth2/sign_out" data-act="logout">${icon('logout')}<span>Sair da conta</span></a>
@@ -246,8 +255,10 @@ export function initAppShell({
   function unwindHistory() {
     if (!pushed) return;
     pushed = false;
+    // The share link rewrites the current entry's state (replaceState), so
+    // the flag, not history.state, says whether our entry is still on top.
     try {
-      if (globalThis.history?.state?.barretoSheet) globalThis.history.back();
+      globalThis.history?.back();
     } catch {
       /* ignore */
     }
@@ -275,10 +286,91 @@ export function initAppShell({
 
   // The phone's Back button closes the sheet instead of leaving the app.
   on(globalThis, 'popstate', () => {
+    // Our own history.back() after closing the details card.
+    if (ignorePop) {
+      ignorePop = false;
+      return;
+    }
+    // The details card sits on top: Back closes it first.
+    if (detailsPushed) {
+      detailsPushed = false;
+      closeDetails();
+      return;
+    }
     if (!pushed) return;
     pushed = false;
     if (active !== 'mapa') close();
   });
+
+  // ---- details card: drag handle, swipe down and Back close it
+  let detailsPushed = false;
+  let ignorePop = false;
+  const detailsEl = () => document.getElementById('barreto-details');
+  const closeDetails = () =>
+    detailsEl()?.querySelector('.barreto-details-close')?.click();
+  function hookDetails() {
+    const d = detailsEl();
+    if (!d || d.dataset.barretoSheet) return !!d;
+    d.dataset.barretoSheet = '1';
+    const handle = document.createElement('div');
+    handle.className = 'barreto-details-grip';
+    handle.innerHTML = '<span></span>';
+    d.prepend(handle);
+    new MutationObserver(() => {
+      if (!enabled) return;
+      if (!d.hidden && !detailsPushed) {
+        try {
+          globalThis.history?.pushState({ barretoDetails: true }, '');
+          detailsPushed = true;
+        } catch {
+          /* ignore */
+        }
+      } else if (d.hidden && detailsPushed) {
+        detailsPushed = false;
+        try {
+          ignorePop = true;
+          globalThis.history.back();
+        } catch {
+          /* ignore */
+        }
+      }
+    }).observe(d, { attributes: true, attributeFilter: ['hidden'] });
+    let start = null;
+    const down = (e) => {
+      if (!enabled) return;
+      if (!e.target.closest('.barreto-details-grip, .barreto-details-header'))
+        return;
+      if (e.target.closest('button, a')) return;
+      start = { y: e.clientY, t: performance.now() };
+      d.setPointerCapture?.(e.pointerId);
+      d.classList.add('dragging');
+    };
+    const move = (e) => {
+      if (!start) return;
+      const dy = Math.max(0, e.clientY - start.y);
+      d.style.transform = `translateY(${dy}px)`;
+    };
+    const up = (e) => {
+      if (!start) return;
+      const dy = e.clientY - start.y;
+      const v = dy / Math.max(1, performance.now() - start.t);
+      start = null;
+      d.classList.remove('dragging');
+      d.style.transform = '';
+      if (dy > 80 || v > 0.6) closeDetails();
+    };
+    d.addEventListener('pointerdown', down, { signal });
+    d.addEventListener('pointermove', move, { signal });
+    d.addEventListener('pointerup', up, { signal });
+    d.addEventListener('pointercancel', up, { signal });
+    return true;
+  }
+  if (!hookDetails()) {
+    const retry = setInterval(() => {
+      if (hookDetails() || signal?.aborted) clearInterval(retry);
+    }, 1000);
+    cleanups.push(() => clearInterval(retry));
+  }
 
   // Panels closed from inside (their own button, or picking an alert, which
   // flies to it) close the sheet too; so does the route panel's own ✕.
@@ -460,6 +552,12 @@ export function initAppShell({
   });
 
   // ------------------------------------------------------------- "Mais"
+  cleanups.push(
+    mountViewsList(more.querySelector('.barreto-more-views'), {
+      styleManager,
+      onApplied: () => close(),
+    }),
+  );
   const stylesBox = more.querySelector('.barreto-more-styles');
   const sourcesBox = more.querySelector('.barreto-more-sources');
   const panelsBox = more.querySelector('.barreto-more-panels');
@@ -575,6 +673,12 @@ export function initAppShell({
       close();
       brasilPanel?.refresh?.();
       showNotice('Atualizando os alertas…');
+    } else if (act === 'timeline') {
+      close();
+      void timeline?.open?.();
+    } else if (act === 'notify') {
+      close();
+      notify?.open?.();
     } else if (act === 'help') {
       close();
       help?.open?.();
@@ -735,14 +839,21 @@ export function initAppShell({
   on(document, 'focusout', () => body.classList.remove('barreto-typing'));
 
   // ------------------------------------------------------------- shortcuts
-  // Home-screen shortcuts open the app at /?abrir=rota|alertas|camadas|busca.
-  function openFromUrl() {
+  // Home-screen shortcuts open the app at /?abrir=rota|alertas|camadas|busca;
+  // a notification adds &alerta=<id> to open that alert.
+  function openFromUrl(href = globalThis.location.href, delay = 1200) {
     let what = null;
+    let alerta = null;
+    let shared = null;
     try {
-      const url = new URL(globalThis.location.href);
+      const url = new URL(href, globalThis.location.href);
       what = url.searchParams.get('abrir');
-      if (what) {
+      alerta = url.searchParams.get('alerta');
+      shared = sharedFromUrl(url.href);
+      if (href === globalThis.location.href && (what || alerta || shared)) {
         url.searchParams.delete('abrir');
+        url.searchParams.delete('alerta');
+        for (const p of Object.values(SHARE_PARAMS)) url.searchParams.delete(p);
         globalThis.history?.replaceState(
           globalThis.history.state,
           '',
@@ -752,22 +863,67 @@ export function initAppShell({
     } catch {
       return;
     }
-    if (!what) return;
+    if (shared) {
+      setTimeout(() => void openShared(shared), delay);
+      return;
+    }
+    if (!what && !alerta) return;
     const run = () => {
       if (what === 'busca') searchBar?.focus?.();
       else if (what === 'rota') {
         if (enabled) open('rota');
         else routePlanner?.show?.();
-      } else if (what === 'alertas' || what === 'brasil') {
-        if (enabled) open('brasil');
-        else brasilPanel?.open?.();
+      } else if (what === 'alertas' || what === 'brasil' || alerta) {
+        if (enabled) {
+          if (active !== 'brasil') open('brasil');
+        } else brasilPanel?.open?.();
+        if (alerta) void brasilPanel?.focusAlert?.(alerta);
       } else if (what === 'camadas') {
         if (enabled) open('camadas');
         else setPanel('data-panel', true);
       }
     };
-    setTimeout(run, 1200);
+    setTimeout(run, delay);
   }
+
+  /** A link, address or coordinates shared to the app → route there. */
+  async function openShared(shared) {
+    let target = parseShared(shared);
+    try {
+      if (target?.resolve) {
+        const res = await fetch(
+          `/api/br/link?u=${encodeURIComponent(target.resolve)}`,
+          { credentials: 'same-origin' },
+        );
+        const body = res.ok ? await res.json() : null;
+        target =
+          parseShared({ title: target.name, url: body?.url || '' }) || target;
+      }
+      if (target?.query) {
+        const [hit] = await searchPlaces(target.query, null);
+        if (hit) target = { ...hit, name: target.name || hit.name };
+      }
+    } catch {
+      /* fall through to the search box */
+    }
+    if (Number.isFinite(target?.lat) && Number.isFinite(target?.lon)) {
+      routePlanner?.setDestination?.({
+        lat: target.lat,
+        lon: target.lon,
+        name: target.name || 'Lugar compartilhado',
+      });
+      showNotice(`Rota até ${target.name || 'o lugar compartilhado'}.`);
+      return;
+    }
+    showNotice('Não achei um endereço no que foi compartilhado.');
+    searchBar?.focus?.();
+  }
+
+  // A tapped notification while the app is already open.
+  on(globalThis.navigator?.serviceWorker, 'message', (event) => {
+    if (event.data?.type === 'barreto:open' && event.data.url)
+      openFromUrl(event.data.url, 50);
+  });
 
   // ------------------------------------------------------------- mode
   function apply() {

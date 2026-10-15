@@ -66,3 +66,24 @@ export function assetCacheHeaders() {
     configurePreviewServer: install,
   };
 }
+
+/**
+ * barreto.top: load the Cesium engine script without blocking the page.
+ * vite-plugin-cesium injects a plain <script src="/cesium/Cesium.js"> in the
+ * head, which stops the browser from drawing anything until 5 MB arrive.
+ * With `defer` it still runs before the app's module script (deferred scripts
+ * run in document order), but the loading screen shows at once.
+ */
+export function deferCesiumScript(html) {
+  return String(html).replace(
+    /<script src="(\/cesium\/Cesium\.js)"><\/script>/,
+    '<script defer src="$1"></script>',
+  );
+}
+
+export function deferCesiumPlugin() {
+  return {
+    name: 'barreto-defer-cesium',
+    transformIndexHtml: { order: 'post', handler: deferCesiumScript },
+  };
+}

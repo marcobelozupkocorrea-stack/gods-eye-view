@@ -26,12 +26,13 @@ import { keySetupEndpoint } from '../standalone/key-setup.js';
 import { weatherProxy } from './weather.js';
 import { brazilRadarProxy } from './brazilRadar.js';
 import { barretoPlacesProxy } from './barretoPlaces.js';
+import { barretoAlertsHub } from './alertas/index.js';
 import { firePerimetersProxy } from './firePerimeters.js';
 import { inmetAlertsProxy } from './inmetAlerts.js';
 import { defesaCivilAlertsProxy } from './defesaCivilAlerts.js';
 import { deterAlertsProxy } from './deterAlerts.js';
 import { cemadenAlertsProxy } from './cemadenAlerts.js';
-import { assetCacheHeaders } from './assetCache.js';
+import { assetCacheHeaders, deferCesiumPlugin } from './assetCache.js';
 import { cycloneProxy } from './cyclones.js';
 import { windProxy } from './wind.js';
 
@@ -75,7 +76,9 @@ function localProviderPlugins({ realtime } = {}) {
     defesaCivilAlertsProxy(),
     deterAlertsProxy(),
     cemadenAlertsProxy(),
+    barretoAlertsHub(),
     assetCacheHeaders(),
+    deferCesiumPlugin(),
     keySetupEndpoint(),
   ];
 }

@@ -8,8 +8,19 @@
 import * as Cesium from 'cesium';
 
 const MANIFEST_URL = '/api/brazil-radar/manifest';
+/** CPTEC frame stamp (UTC "YYYYMMDDHHmm") `offsetMin` before the latest. */
+export function stampBefore(radar, offsetMin = 0) {
+  if (!offsetMin) return radar.stamp;
+  const t = Date.parse(radar.time) - offsetMin * 60_000;
+  if (!Number.isFinite(t)) return radar.stamp;
+  const d = new Date(t);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}`;
+}
+
+let timeOffsetMin = 0;
 const frameUrl = (radar) =>
-  `/api/brazil-radar/frame?id=${encodeURIComponent(radar.id)}&stamp=${radar.stamp}`;
+  `/api/brazil-radar/frame?id=${encodeURIComponent(radar.id)}&stamp=${stampBefore(radar, timeOffsetMin)}`;
 
 /** Keep only well-formed radars from the proxy manifest. */
 export function validRadars(manifest) {
@@ -152,6 +163,18 @@ export function createBrazilRadarLayer({
         v.dataSources.remove(dataSource, true);
       dataSource = null;
       viewer = null;
+    },
+
+    /** Timeline: show each radar `minutes` before its latest frame (0 = now). */
+    setTimeOffset(minutes = 0) {
+      const next = Math.max(
+        0,
+        Math.min(6 * 60, Math.round(Number(minutes) || 0)),
+      );
+      if (next === timeOffsetMin) return false;
+      timeOffsetMin = next;
+      if (enabled) void this.update();
+      return true;
     },
 
     /** Radars currently drawn: name, operator and frame time. */

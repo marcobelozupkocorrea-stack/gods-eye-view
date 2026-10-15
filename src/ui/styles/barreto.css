@@ -2603,3 +2603,1266 @@ body.barreto-app.barreto-landscape.barreto-sheet-open
     animation: none !important;
   }
 }
+
+/* =====================================================================
+   Alertas: tabs, "Perto de você", "Por lugar", "Histórico"
+   (src/ui/barreto/alertsViews.js, brasilPanel.js)
+   ===================================================================== */
+.al-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.al-tabs {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 2px;
+  padding: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.al-tab {
+  flex: 1 1 0;
+  min-height: 32px;
+  padding: 0 6px;
+  color: var(--text-secondary);
+  font: 600 12.5px var(--font-sans);
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.al-tab[aria-selected='true'] {
+  color: var(--text-primary);
+  background: rgba(57, 208, 255, 0.18);
+}
+
+.al-bell {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  min-height: 38px;
+  padding: 0 10px;
+  color: var(--accent);
+  font: 600 12px var(--font-sans);
+  background: rgba(57, 208, 255, 0.08);
+  border: 1px solid rgba(57, 208, 255, 0.25);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.al-bell .material-symbols-outlined {
+  font-size: 19px;
+}
+
+@media (max-width: 420px) {
+  .al-bell span:last-child {
+    display: none;
+  }
+}
+
+.al-muted {
+  margin: 0;
+  color: var(--text-secondary);
+  font: 12.5px/1.45 var(--font-sans);
+}
+
+.al-small {
+  margin-top: 10px;
+  font-size: 11.5px;
+}
+
+.al-offline {
+  margin: 0;
+  padding: 8px 10px;
+  color: #ffd60a;
+  font: 600 12.5px var(--font-sans);
+  background: rgba(255, 214, 10, 0.08);
+  border-radius: 8px;
+}
+
+.al-offline[hidden],
+.al-now[hidden],
+.al-places[hidden],
+.al-history[hidden] {
+  display: none;
+}
+
+.al-now,
+.al-places,
+.al-history {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.al-level {
+  display: inline-block;
+  padding: 1px 7px;
+  color: #0b0f14;
+  font: 700 10.5px/1.5 var(--font-sans);
+  white-space: nowrap;
+  background: var(--lvl);
+  border-radius: 999px;
+}
+
+/* ---- Perto de você ---- */
+.al-near {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(140, 200, 255, 0.14);
+  border-radius: 12px;
+}
+
+.al-near.hot {
+  border-color: rgba(255, 59, 48, 0.55);
+  box-shadow: inset 3px 0 0 #ff3b30;
+}
+
+.al-near-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+  font: 14px var(--font-sans);
+}
+
+.al-near-icon {
+  color: var(--accent);
+  font-size: 20px;
+}
+
+.al-near-where {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.al-near-select {
+  flex: 0 1 auto;
+  max-width: 44%;
+  padding: 5px 6px;
+  color: var(--text-primary);
+  font: 12px var(--font-sans);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+}
+
+.al-ok {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: #7ee08a;
+  font: 600 13px var(--font-sans);
+}
+
+.al-ok .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.al-btn,
+.al-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  min-height: 36px;
+  padding: 0 12px;
+  color: #001018;
+  font: 700 13px var(--font-sans);
+  background: var(--accent);
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.al-btn[hidden] {
+  display: none;
+}
+
+.al-link {
+  min-height: 28px;
+  padding: 0;
+  color: var(--accent);
+  background: none;
+}
+
+.al-hazards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.al-hazard {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.al-hazard-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: var(--lvl);
+  background: color-mix(in srgb, var(--lvl) 16%, transparent);
+  border-radius: 9px;
+}
+
+.al-hazard-icon .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.al-hazard-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.al-hazard-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-primary);
+  font: 13.5px var(--font-sans);
+}
+
+.al-hazard-meta,
+.al-row-meta {
+  color: var(--text-secondary);
+  font: 12px/1.4 var(--font-sans);
+}
+
+/* ---- lists (states, cities, history) ---- */
+.al-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.al-row,
+.al-hitem {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  width: 100%;
+  padding: 10px 10px 10px 0;
+  color: var(--text-primary);
+  text-align: left;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(140, 200, 255, 0.09);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.al-hitem {
+  cursor: default;
+}
+
+.al-row:hover {
+  background: rgba(57, 208, 255, 0.08);
+}
+
+.al-bar {
+  flex: 0 0 4px;
+  margin-left: -1px;
+  background: var(--lvl);
+  border-radius: 0 3px 3px 0;
+}
+
+.al-row-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.al-row-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font: 13.5px var(--font-sans);
+}
+
+.al-chev {
+  align-self: center;
+  color: var(--text-secondary);
+}
+
+.al-kinds {
+  display: flex;
+  gap: 4px;
+}
+
+.al-kind {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  color: var(--lvl);
+  background: color-mix(in srgb, var(--lvl) 14%, transparent);
+  border-radius: 6px;
+}
+
+.al-kind .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.al-city .al-hazard-icon {
+  width: 26px;
+  height: 26px;
+}
+
+.al-subhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+  font: 13px var(--font-sans);
+}
+
+.al-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 10px 0 6px;
+  color: var(--accent);
+  font: 600 12.5px var(--font-sans);
+  background: rgba(57, 208, 255, 0.08);
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.al-live {
+  color: #ff6b5f;
+  font: 700 10.5px var(--font-sans);
+  text-transform: uppercase;
+}
+
+/* ---- history ---- */
+.al-city-wrap {
+  position: relative;
+}
+
+.al-city-wrap .brasil-search {
+  width: 100%;
+}
+
+.al-suggest {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  background: rgba(12, 18, 26, 0.99);
+  border: 1px solid rgba(140, 200, 255, 0.18);
+  border-radius: 10px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
+}
+
+.al-suggest[hidden],
+.al-city-chip[hidden] {
+  display: none;
+}
+
+.al-suggest button {
+  padding: 9px 10px;
+  color: var(--text-primary);
+  font: 13px var(--font-sans);
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.al-suggest button:hover {
+  background: rgba(57, 208, 255, 0.1);
+}
+
+.al-city-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 4px 4px 10px;
+  color: var(--text-primary);
+  font: 600 13px var(--font-sans);
+  background: rgba(57, 208, 255, 0.12);
+  border-radius: 999px;
+}
+
+.al-city-chip button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.al-city-chip .material-symbols-outlined {
+  font-size: 17px;
+}
+
+.al-summary {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font: 13px var(--font-sans);
+}
+
+.al-summary b {
+  color: var(--text-primary);
+  font-size: 22px;
+}
+
+.al-chart {
+  display: flex;
+  gap: 2px;
+  align-items: flex-end;
+  height: 64px;
+  padding: 6px 0 0;
+  border-bottom: 1px solid rgba(140, 200, 255, 0.18);
+}
+
+.al-chart-bar {
+  flex: 1 1 0;
+  min-width: 2px;
+  height: max(2px, var(--h));
+  background: linear-gradient(180deg, var(--accent), rgba(57, 208, 255, 0.45));
+  border-radius: 2px 2px 0 0;
+}
+
+.al-chart-axis {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  font: 11px var(--font-sans);
+}
+
+.al-h {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font: 700 11.5px var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.al-types {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.al-type {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 9.5rem) 1fr auto;
+  gap: 8px;
+  align-items: center;
+  color: var(--text-primary);
+  font: 12.5px var(--font-sans);
+}
+
+.al-type .material-symbols-outlined {
+  color: var(--accent);
+  font-size: 18px;
+}
+
+.al-type-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.al-type-bar {
+  height: 8px;
+  background: linear-gradient(90deg, var(--accent), rgba(57, 208, 255, 0.35));
+  border-radius: 4px;
+  width: max(4px, var(--w));
+}
+
+.al-levels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ---- Notifications dialog ---- */
+#barreto-notify {
+  position: fixed;
+  z-index: 410;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 6, 12, 0.6);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+#barreto-notify[hidden] {
+  display: none;
+}
+
+#barreto-notify.visible {
+  opacity: 1;
+}
+
+.barreto-notify-card {
+  display: flex;
+  flex-direction: column;
+  width: min(30rem, 100%);
+  max-height: calc(100dvh - 32px);
+  color: var(--text-primary);
+  background: rgba(10, 16, 24, 0.99);
+  border: 1px solid rgba(140, 200, 255, 0.2);
+  border-radius: 16px;
+  box-shadow: 0 1.4rem 4.5rem rgba(0, 0, 0, 0.72);
+}
+
+.barreto-notify-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px 6px 18px;
+}
+
+.barreto-notify-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font: 700 17px var(--font-sans);
+}
+
+.barreto-notify-card h2 .material-symbols-outlined {
+  color: var(--accent);
+}
+
+.barreto-notify-close {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.barreto-notify-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 6px 18px 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.barreto-notify-body h3 {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font: 700 11.5px var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.barreto-notify-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  color: #001018;
+  font: 700 15px var(--font-sans);
+  background: var(--accent);
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.barreto-notify-toggle.on {
+  color: var(--text-primary);
+  background: rgba(126, 224, 138, 0.14);
+  border: 1px solid rgba(126, 224, 138, 0.5);
+}
+
+.barreto-notify-toggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.barreto-notify-msg {
+  margin: 0;
+  color: #ffd60a;
+  font: 13px/1.45 var(--font-sans);
+}
+
+.barreto-notify-msg:empty {
+  display: none;
+}
+
+.barreto-notify-opt {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font: 14px/1.35 var(--font-sans);
+  cursor: pointer;
+}
+
+.barreto-notify-opt input {
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--accent);
+}
+
+.barreto-notify-opt > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.barreto-notify-opt small {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.barreto-notify-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 28px;
+  color: var(--text-secondary);
+  font: 13px var(--font-sans);
+}
+
+body.barreto-app #barreto-notify {
+  z-index: 262;
+  align-items: end;
+  padding: 0;
+}
+
+body.barreto-app .barreto-notify-card {
+  width: 100%;
+  max-height: calc(100dvh - var(--app-safe-top) - 20px);
+  padding-bottom: var(--app-safe-bottom);
+  border-radius: 20px 20px 0 0;
+}
+
+/* =====================================================================
+   Cleaner, more legible look (pt-BR): plain sans-serif titles in normal
+   case, brighter secondary text, solid panels without glow, no monospace
+   "terminal" text in lists and chips. Positions are untouched.
+   ===================================================================== */
+html[lang^='pt'] {
+  --text-secondary: rgba(232, 234, 237, 0.74);
+  --text-dim: rgba(232, 234, 237, 0.52);
+}
+
+html[lang^='pt'] .panel-glow,
+html[lang^='pt'] .title-glow,
+html[lang^='pt'] #style-indicator,
+html[lang^='pt'] #title-bar .frame-rate-readout {
+  display: none !important;
+}
+
+html[lang^='pt'] .panel-title,
+html[lang^='pt'] .pp-header-label,
+html[lang^='pt'] #map-source-label,
+html[lang^='pt'] .location-toolbar-label,
+html[lang^='pt'] #command-dock .panel-title {
+  color: var(--text-primary) !important;
+  font: 600 13.5px/1.25 var(--font-sans) !important;
+  letter-spacing: 0.005em !important;
+  text-transform: none !important;
+  opacity: 1 !important;
+}
+
+html[lang^='pt'] #left-panel-stack > .panel-collapsible,
+html[lang^='pt'] #right-context-rail > .panel-collapsible {
+  background: rgba(10, 15, 22, 0.9);
+  border: 1px solid rgba(140, 200, 255, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  -webkit-backdrop-filter: blur(14px) saturate(130%);
+  backdrop-filter: blur(14px) saturate(130%);
+}
+
+html[lang^='pt'] .panel-divider {
+  opacity: 0.35;
+}
+
+html[lang^='pt'] .panel-collapse-btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: var(--text-primary);
+  font: 500 17px/1 var(--font-sans);
+  background: rgba(255, 255, 255, 0.06);
+  border: 0;
+  border-radius: 50%;
+}
+
+html[lang^='pt'] .panel-collapse-btn:hover {
+  background: rgba(57, 208, 255, 0.16);
+}
+
+/* Layers list */
+html[lang^='pt'] .data-layer-group-heading {
+  color: var(--text-secondary);
+  font: 700 11px var(--font-sans);
+  letter-spacing: 0.06em;
+}
+
+html[lang^='pt'] .data-toggle-meta,
+html[lang^='pt'] .data-toggle-meta * {
+  font-family: var(--font-sans) !important;
+  font-size: 11.5px !important;
+  letter-spacing: 0 !important;
+}
+
+html[lang^='pt'] .data-toggle-btn {
+  font: 700 10.5px/1 var(--font-sans);
+  letter-spacing: 0.03em;
+  border-radius: 999px;
+}
+
+html[lang^='pt'] .data-toggle-left {
+  font-size: 14px;
+}
+
+/* Alerts list */
+html[lang^='pt'] .brasil-item-meta,
+html[lang^='pt'] .brasil-status,
+html[lang^='pt'] .brasil-chip-count {
+  font-family: var(--font-sans);
+  letter-spacing: 0;
+}
+
+html[lang^='pt'] .brasil-item-title {
+  font-size: 13px;
+}
+
+/* Status chips (loading, traffic, cameras): no split-flap letters in
+   English while the Portuguese text arrives. */
+html[lang^='pt'] .gev-flap-cells {
+  display: none !important;
+}
+
+html[lang^='pt'] .gev-flap-host.gev-flap-active > .gev-flap-text {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+}
+
+html[lang^='pt'] #global-loading-status,
+html[lang^='pt'] #global-loading-status *,
+html[lang^='pt'] #traffic-sync-chip,
+html[lang^='pt'] #traffic-sync-chip *,
+html[lang^='pt'] #cctv-sync-chip,
+html[lang^='pt'] #cctv-sync-chip * {
+  font-family: var(--font-sans) !important;
+  letter-spacing: 0.02em !important;
+}
+
+/* Brand: "Barreto" with a quiet subtitle, no spaced-out capitals. */
+html[lang^='pt'] #title-bar h1 {
+  gap: 10px;
+  font: 700 21px/1 var(--font-sans);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+html[lang^='pt'] #title-bar h1 > span:last-child {
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+html[lang^='pt'] #title-bar .subtitle {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font: 500 11.5px var(--font-sans);
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+html[lang^='pt'] #intel-hud #hud-latlon {
+  font-family: var(--font-sans);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Loading screen in Portuguese, calmer. */
+html[lang^='pt'] #loading-screen h2 {
+  font: 700 26px var(--font-sans);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+/* The welcome card on a touch screen has no Esc key. */
+@media (pointer: coarse) {
+  .barreto-welcome-footer > span:last-child {
+    display: none;
+  }
+}
+
+/* ---------- Press-and-hold / right-click menu (mapMenu.js) ---------- */
+#barreto-mapmenu {
+  position: fixed;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  color: var(--text-primary);
+  background: rgba(12, 18, 26, 0.98);
+  border: 1px solid rgba(140, 200, 255, 0.18);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+#barreto-mapmenu[hidden] {
+  display: none;
+}
+
+#barreto-mapmenu.visible {
+  opacity: 1;
+  transform: none;
+}
+
+#barreto-mapmenu header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px 6px;
+  font: 14px/1.3 var(--font-sans);
+}
+
+#barreto-mapmenu header small,
+.barreto-mapmenu-alerts small {
+  color: var(--text-secondary);
+  font: 12px var(--font-sans);
+}
+
+#barreto-mapmenu > button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 10px;
+  color: var(--text-primary);
+  font: 500 14px var(--font-sans);
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+#barreto-mapmenu > button:hover {
+  background: rgba(57, 208, 255, 0.1);
+}
+
+#barreto-mapmenu > button .material-symbols-outlined {
+  color: var(--accent);
+  font-size: 20px;
+}
+
+.barreto-mapmenu-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 8px 10px 6px;
+  border-top: 1px solid rgba(140, 200, 255, 0.12);
+}
+
+.barreto-mapmenu-alerts p {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  font: 13px/1.3 var(--font-sans);
+}
+
+.barreto-mapmenu-alerts p > span:last-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.barreto-mapmenu-alerts .ok {
+  color: #7ee08a;
+}
+
+/* ---------- Details card as a sheet on phones ---------- */
+.barreto-details-grip {
+  display: none;
+}
+
+body.barreto-app .barreto-details-grip {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  display: grid;
+  place-items: center;
+  height: 18px;
+  margin: -8px 0 -6px;
+  touch-action: none;
+}
+
+body.barreto-app .barreto-details-grip span {
+  width: 40px;
+  height: 5px;
+  background: rgba(200, 220, 235, 0.45);
+  border-radius: 3px;
+}
+
+body.barreto-app #barreto-details .barreto-details-header {
+  touch-action: none;
+}
+
+body.barreto-app #barreto-details.dragging {
+  transition: none !important;
+}
+
+/* ---------- Turn-by-turn (navigation.js) ---------- */
+#barreto-nav[hidden] {
+  display: none;
+}
+
+.barreto-nav-step {
+  position: fixed;
+  z-index: 250;
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  right: 10px;
+  left: 10px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 14px 16px;
+  color: #fff;
+  background: #0b6e4f;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.barreto-nav-arrow {
+  font-size: 52px !important;
+}
+
+.barreto-nav-in {
+  display: block;
+  font: 800 26px/1.1 var(--font-sans);
+}
+
+.barreto-nav-text {
+  margin: 4px 0 0;
+  font: 600 16px/1.3 var(--font-sans);
+}
+
+.barreto-nav-warn {
+  position: fixed;
+  z-index: 250;
+  top: calc(env(safe-area-inset-top, 0px) + 118px);
+  right: 10px;
+  left: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 10px 12px;
+  color: #fff;
+  font: 600 14px var(--font-sans);
+  background: #b3261e;
+  border-radius: 12px;
+}
+
+.barreto-nav-warn[hidden] {
+  display: none;
+}
+
+.barreto-nav-warn button,
+.barreto-nav-end {
+  min-height: 40px;
+  padding: 0 16px;
+  font: 700 14px var(--font-sans);
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.barreto-nav-warn button {
+  color: #b3261e;
+  background: #fff;
+}
+
+.barreto-nav-bar {
+  position: fixed;
+  z-index: 250;
+  right: 10px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+  left: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 10px 10px 10px 16px;
+  color: var(--text-primary);
+  background: rgba(10, 15, 22, 0.97);
+  border: 1px solid rgba(140, 200, 255, 0.16);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.barreto-nav-left {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  font: 13px var(--font-sans);
+}
+
+.barreto-nav-left b {
+  font-size: 17px;
+}
+
+.barreto-nav-voice {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.barreto-nav-end {
+  color: #fff;
+  background: #b3261e;
+}
+
+body.barreto-navigating #barreto-tabbar,
+body.barreto-navigating .barreto-searchbar,
+body.barreto-navigating #barreto-map-fabs,
+body.barreto-navigating #barreto-route,
+body.barreto-navigating #top-center-actions,
+body.barreto-navigating #left-panel-stack,
+body.barreto-navigating #right-context-rail,
+body.barreto-navigating #command-dock,
+body.barreto-navigating #title-bar {
+  display: none !important;
+}
+
+.barreto-route-go {
+  color: #001018 !important;
+  background: var(--accent) !important;
+  font-weight: 700 !important;
+}
+
+/* ---------- Linha do tempo (timeline.js) ---------- */
+#barreto-timeline {
+  position: fixed;
+  z-index: 170;
+  bottom: calc(2vh + 5.6rem);
+  left: 50%;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: min(560px, calc(100vw - 24px));
+  padding: 10px 10px 8px 12px;
+  color: var(--text-primary);
+  background: rgba(10, 15, 22, 0.95);
+  border: 1px solid rgba(140, 200, 255, 0.16);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  transform: translateX(-50%);
+}
+
+#barreto-timeline[hidden] {
+  display: none;
+}
+
+.barreto-tl-main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.barreto-tl-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+  font: 13px var(--font-sans);
+}
+
+.barreto-tl-alerts {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+#barreto-timeline input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.barreto-tl-scale {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  font: 11px var(--font-sans);
+}
+
+.barreto-tl-play,
+.barreto-tl-close {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  color: #001018;
+  background: var(--accent);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.barreto-tl-close {
+  width: 36px;
+  height: 36px;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+body.barreto-app #barreto-timeline {
+  bottom: calc(var(--barreto-tabbar-h) + 10px);
+  width: calc(100vw - 20px);
+}
+
+body.barreto-app.barreto-sheet-open #barreto-timeline {
+  display: none;
+}
+
+/* ---------- Minhas visões ---------- */
+#barreto-views-pop {
+  position: fixed;
+  z-index: 320;
+  width: 320px;
+  padding: 12px;
+  color: var(--text-primary);
+  background: rgba(12, 18, 26, 0.98);
+  border: 1px solid rgba(140, 200, 255, 0.18);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+#barreto-views-pop[hidden] {
+  display: none;
+}
+
+#barreto-views-pop h3 {
+  margin: 0 0 8px;
+  font: 700 14px var(--font-sans);
+}
+
+.barreto-views-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.barreto-view {
+  display: inline-flex;
+  align-items: center;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(140, 200, 255, 0.16);
+  border-radius: 18px;
+}
+
+.barreto-view button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 34px;
+  padding: 0 10px;
+  color: var(--text-primary);
+  font: 500 13px var(--font-sans);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.barreto-view button[data-role='remove'] {
+  padding: 0 8px 0 2px;
+  color: var(--text-secondary);
+}
+
+.barreto-view .material-symbols-outlined {
+  color: var(--accent);
+  font-size: 17px;
+}
+
+.barreto-view button[data-role='remove'] .material-symbols-outlined {
+  color: inherit;
+}
+
+/* Computer: open panels on the left get room for the alert tabs and for
+   layer names on one line. */
+@media (min-width: 721px) {
+  html[lang^='pt'] #left-panel-stack > #brasil-panel,
+  html[lang^='pt'] #left-panel-stack > #data-panel {
+    --panel-expanded-width: 360px;
+  }
+
+  html[lang^='pt'] #left-panel-stack > #brasil-panel:not(.collapsed),
+  html[lang^='pt'] #left-panel-stack > #data-panel:not(.collapsed) {
+    width: 360px;
+  }
+}

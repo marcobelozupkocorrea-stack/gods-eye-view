@@ -16,7 +16,9 @@ const SECTIONS = [
     icon: 'warning',
     title: 'Ver o que está acontecendo no Brasil',
     items: [
-      'Abra o painel <b>BRASIL AGORA</b> (canto superior esquerdo, botão <b>+</b>).',
+      'Abra <b>Alertas do Brasil</b> (no celular, a aba <b>Alertas</b>). Em cima aparece <b>Perto de você</b>: os alertas da sua cidade ou de um lugar salvo.',
+      'Abas: <b>Agora</b> (lista de alertas), <b>Lugares</b> (por estado e cidade, sem repetir o mesmo risco avisado por duas fontes) e <b>Histórico</b> (quantos alertas teve em um estado ou cidade, por tipo e por dia).',
+      'O botão <b>Notificações</b> avisa no celular quando sai um alerta novo nos seus lugares.',
       'Ele lista os alertas ativos do INMET, da Defesa Civil e do Cemaden, e os alertas de desmatamento do INPE.',
       '<b>Toque num item</b> e o mapa vai até o local e abre os detalhes.',
     ],
@@ -25,7 +27,7 @@ const SECTIONS = [
     icon: 'filter_alt',
     title: 'Filtrar',
     items: [
-      'No BRASIL AGORA, ligue ou desligue as <b>fontes</b> nos botões (INMET, Defesa Civil, Cemaden, Desmatamento).',
+      'Em Alertas, ligue ou desligue as <b>fontes</b> nos botões (INMET, Defesa Civil, Cemaden, Desmatamento).',
       'Escolha a <b>gravidade</b> (todas, alta ou maior, só a máxima).',
       'Digite um <b>estado ou cidade</b> (ex.: <i>SP</i>, <i>Ubatuba</i>, <i>Rio Grande do Sul</i>). Acentos não importam.',
     ],
@@ -34,7 +36,7 @@ const SECTIONS = [
     icon: 'layers',
     title: 'Ligar e desligar camadas',
     items: [
-      'Painel <b>CAMADAS</b>: cada linha tem um botão <b>LIGADA / DESLIGADA</b>.',
+      'Painel <b>Camadas</b>: cada linha tem um botão <b>LIGADA / DESLIGADA</b>.',
       'Com a camada ligada aparece a <b>legenda</b> com as cores e quantas ocorrências há de cada tipo.',
       'O botão <span class="ms">layers_clear</span> no topo desliga todas de uma vez.',
     ],
@@ -72,7 +74,7 @@ const SECTIONS = [
     icon: 'videocam',
     title: 'Câmeras ao vivo',
     items: [
-      'Ligue <b>Câmeras públicas</b> em CAMADAS e aproxime de uma cidade (ex.: São Paulo, litoral norte de SP).',
+      'Ligue <b>Câmeras públicas</b> em Camadas e aproxime de uma cidade (ex.: São Paulo, litoral norte de SP).',
       'Toque no ícone da câmera: as do DER-SP mostram vídeo ao vivo; as da CET mostram fotos atualizadas.',
       'Vídeo ao vivo começa em alguns segundos. No máximo 6 vídeos ao mesmo tempo para todos.',
     ],

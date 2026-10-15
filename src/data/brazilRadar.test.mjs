@@ -74,3 +74,53 @@ test('client rejects malformed manifests', () => {
     [],
   );
 });
+
+test('timeline frames look back a few minutes, else a transparent pixel', async () => {
+  const { brazilRadarProxy } =
+    await import('../../server/providers/brazilRadar.js');
+  const PNG = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 1, 2, 3]);
+  const asked = [];
+  const fetchImpl = async (url) => {
+    asked.push(url);
+    if (url.includes('catalog'))
+      return new Response(JSON.stringify(catalog([product()])), {
+        headers: { 'content-type': 'application/json' },
+      });
+    // Only 15:47 exists in the past.
+    if (url.includes('_202610141547.png'))
+      return new Response(PNG, { headers: { 'content-type': 'image/png' } });
+    return new Response('nope', { status: 404 });
+  };
+  const plugin = brazilRadarProxy({ fetchImpl, now: () => NOW });
+  let handler;
+  plugin.configurePreviewServer({
+    middlewares: { use: (_p, h) => (handler = h) },
+  });
+  const call = (stamp) =>
+    new Promise((resolve) => {
+      const res = {
+        headersSent: false,
+        writeHead(status, headers) {
+          this.status = status;
+          this.headers = headers;
+        },
+        end(body) {
+          resolve({ status: this.status, headers: this.headers, body });
+        },
+      };
+      handler(
+        {
+          method: 'GET',
+          url: `/frame?id=decea/saoroque/cappi/cappi3km&stamp=${stamp}`,
+        },
+        res,
+      );
+    });
+  const hit = await call('202610141550');
+  assert.equal(hit.status, 200);
+  assert.deepEqual(Buffer.from(hit.body), PNG, '15:50 falls back to 15:47');
+  const none = await call('202610141500');
+  assert.equal(none.status, 200);
+  assert.equal(Buffer.from(none.body).length, 70, 'transparent pixel');
+  assert.match(none.headers['Cache-Control'], /max-age=600/);
+});

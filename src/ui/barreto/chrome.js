@@ -7,18 +7,30 @@ import * as Cesium from 'cesium';
 
 /** Exact English text → Portuguese, for titles and labels. */
 export const CHROME_TEXT = Object.freeze({
-  'DATA LAYERS': 'CAMADAS',
-  CCTV: 'CÂMERAS',
-  'STREET LEVEL': 'NÍVEL DA RUA',
-  SCENES: 'CENAS',
-  DISPLAY: 'EXIBIÇÃO',
-  WEATHER: 'TEMPO',
-  'RECENT IMAGERY': 'IMAGENS RECENTES',
-  CONTEXT: 'CONTEXTO',
-  RADIO: 'RÁDIO',
-  'VISUAL PRESETS': 'ESTILOS',
-  'MAP SOURCE': 'FONTE DO MAPA',
-  LOCATION: 'LOCAL',
+  'DATA LAYERS': 'Camadas',
+  CCTV: 'Câmeras',
+  'STREET LEVEL': 'Nível da rua',
+  SCENES: 'Cenas',
+  DISPLAY: 'Exibição',
+  WEATHER: 'Tempo',
+  'RECENT IMAGERY': 'Imagens recentes',
+  CONTEXT: 'Contexto',
+  RADIO: 'Rádio',
+  'VISUAL PRESETS': 'Estilos',
+  'MAP SOURCE': 'Fonte do mapa',
+  LOCATION: 'Local',
+  'BRASIL AGORA': 'Alertas do Brasil',
+});
+
+/** Visual style buttons: [label, tooltip]. */
+export const STYLE_TEXT = Object.freeze({
+  normal: ['Normal', 'Mapa sem filtro'],
+  retro: ['TV antiga', 'Tela de tubo verde, com linhas'],
+  surveillance: ['Noturna', 'Visão noturna, em verde'],
+  thermal: ['Térmica', 'Cores de câmera térmica'],
+  anime: ['Desenho', 'Cores vivas e contornos de desenho'],
+  noir: ['P&B', 'Preto e branco com alto contraste'],
+  snow: ['Neve', 'Cena fria, coberta de neve'],
 });
 
 /** id → [title/aria-label] for the top action buttons and search. */
@@ -78,12 +90,18 @@ export function translateChrome() {
   // barreto.top branding: the product name the team uses. The original
   // project is credited in the "Como usar" guide.
   const titleText = document.querySelector('#title-bar h1 > span:last-child');
-  if (titleText)
-    titleText.innerHTML = 'BARRETO <span class="title-accent">·</span>';
+  if (titleText) titleText.textContent = 'Barreto';
   const subtitle = document.querySelector('#title-bar .subtitle');
-  if (subtitle) subtitle.textContent = 'MONITORAMENTO EM TEMPO REAL';
+  if (subtitle) subtitle.textContent = 'Monitoramento em tempo real';
   const loaderTitle = document.querySelector('#loading-screen h2');
-  if (loaderTitle) loaderTitle.textContent = 'BARRETO';
+  if (loaderTitle) loaderTitle.textContent = 'Barreto';
+  for (const button of document.querySelectorAll('.style-btn[data-style]')) {
+    const text = STYLE_TEXT[button.dataset.style];
+    if (!text) continue;
+    const label = button.querySelector('.btn-label');
+    if (label) label.textContent = text[0];
+    button.title = text[1];
+  }
   document.title = 'Barreto · Monitoramento';
   const search = document.getElementById('location-search');
   if (search) {

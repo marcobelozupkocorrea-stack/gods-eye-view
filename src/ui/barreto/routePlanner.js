@@ -82,7 +82,12 @@ const INCIDENT_ICON = {
   hazard: '⚠',
 };
 
-export function initRoutePlanner({ styleManager, dataManager, signal } = {}) {
+export function initRoutePlanner({
+  styleManager,
+  dataManager,
+  onNavigate,
+  signal,
+} = {}) {
   const viewer = () => styleManager?.viewer || null;
   const panel = document.createElement('aside');
   panel.id = 'barreto-route';
@@ -226,7 +231,7 @@ export function initRoutePlanner({ styleManager, dataManager, signal } = {}) {
     return slots.map((s) => s.place).filter(Boolean);
   }
 
-  async function maybeRoute() {
+  async function maybeRoute({ fly = true } = {}) {
     const origin = slots[0].place;
     const dest = slots.at(-1).place;
     if (!origin || !dest) {
@@ -235,7 +240,7 @@ export function initRoutePlanner({ styleManager, dataManager, signal } = {}) {
       return;
     }
     applying = true;
-    flyPending = true;
+    flyPending = fly !== false;
     try {
       if (!dataManager?.isEnabled?.('directions'))
         await dataManager?.setEnabled?.('directions', true, { origin: 'user' });
@@ -321,6 +326,7 @@ export function initRoutePlanner({ styleManager, dataManager, signal } = {}) {
           : ''
       }
       <div class="barreto-route-actions">
+        ${route.steps?.length ? '<button type="button" class="barreto-route-go"><span class="material-symbols-outlined" aria-hidden="true">navigation</span>Iniciar</button>' : ''}
         <a class="barreto-route-nav" href="${escapeHtml(navUrl('waze', pts, mode))}" target="_blank" rel="noopener noreferrer"><span class="material-symbols-outlined" aria-hidden="true">navigation</span>Abrir no Waze</a>
         <a class="barreto-route-nav" href="${escapeHtml(navUrl('google', pts, mode))}" target="_blank" rel="noopener noreferrer"><span class="material-symbols-outlined" aria-hidden="true">map</span>Google Maps</a>
         <button type="button" class="barreto-route-fly"><span class="material-symbols-outlined" aria-hidden="true">flight</span>Sobrevoar</button>
@@ -423,7 +429,7 @@ export function initRoutePlanner({ styleManager, dataManager, signal } = {}) {
               )
               .join(
                 '',
-              )}</ul><p class="barreto-route-hint">Ligue “Câmeras públicas” em CAMADAS e toque no ícone da câmera no mapa para ver a imagem.</p>`
+              )}</ul><p class="barreto-route-hint">Ligue “Câmeras públicas” em Camadas e toque no ícone da câmera no mapa para ver a imagem.</p>`
           : '<p class="barreto-route-ok">Nenhuma câmera pública a menos de 400 m do caminho.</p>'
       }`,
     );
@@ -572,6 +578,13 @@ export function initRoutePlanner({ styleManager, dataManager, signal } = {}) {
           { range: flyRow.closest('.cam') ? 600 : 3000 },
         );
         if (globalThis.matchMedia?.('(max-width: 720px)').matches) hide();
+        return;
+      }
+      if (t.closest?.('.barreto-route-go')) {
+        if (lastRoute) {
+          hide();
+          onNavigate?.(lastRoute, { mode, points: points() });
+        }
         return;
       }
       if (t.closest?.('.barreto-route-fly')) {
@@ -752,10 +765,21 @@ export function initRoutePlanner({ styleManager, dataManager, signal } = {}) {
     reportController?.abort();
     panel.remove();
   });
+  /** Recalculate from where the person is now (navigation, off route). */
+  function rerouteFrom(lat, lon) {
+    slots[0].place = { lat, lon, name: 'Minha localização', myLocation: true };
+    renderFields();
+    void maybeRoute({ fly: false });
+  }
+
   return {
     show,
     hide,
     toggle: () => (panel.hidden ? show() : hide()),
     setDestination,
+    rerouteFrom,
+    get route() {
+      return lastRoute;
+    },
   };
 }

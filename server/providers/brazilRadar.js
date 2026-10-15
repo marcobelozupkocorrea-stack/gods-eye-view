@@ -21,6 +21,11 @@ const MAX_CATALOG_BYTES = 4 * 1024 * 1024;
 const MAX_FRAME_BYTES = 3 * 1024 * 1024;
 const MAX_FRAMES = 96;
 const KEY_RE = /^[a-z]{2,16}\/[a-z]{2,32}\/cappi\/cappi3km$/;
+/** 1×1 transparent PNG. */
+const TRANSPARENT_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGBgAAAABQABpfZFQAAAAABJRU5ErkJggg==',
+  'base64',
+);
 const STAMP_RE = /^20\d{10}$/;
 
 const OWNER_NAMES = Object.freeze({
@@ -225,6 +230,38 @@ export function brazilRadarProxy({
     return work;
   }
 
+  /**
+   * Timeline frames: radars publish every 5–12 minutes, so the requested
+   * minute may not exist. Look back up to 11 minutes; with nothing there,
+   * answer a transparent pixel so the map shows "no data" instead of a
+   * white square.
+   */
+  const missing = new Map();
+  async function loadPastFrame(radar, stamp) {
+    const key = `${radar.id}@${stamp}`;
+    if (missing.has(key)) return TRANSPARENT_PNG;
+    const base = Date.UTC(
+      Number(stamp.slice(0, 4)),
+      Number(stamp.slice(4, 6)) - 1,
+      Number(stamp.slice(6, 8)),
+      Number(stamp.slice(8, 10)),
+      Number(stamp.slice(10, 12)),
+    );
+    for (let back = 0; back <= 11; back += 1) {
+      const d = new Date(base - back * 60_000);
+      const s = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}${String(d.getUTCHours()).padStart(2, '0')}${String(d.getUTCMinutes()).padStart(2, '0')}`;
+      if (missing.has(`${radar.id}@${s}`)) continue;
+      try {
+        return await loadFrame(radar, s);
+      } catch {
+        missing.set(`${radar.id}@${s}`, true);
+      }
+    }
+    missing.set(key, true);
+    while (missing.size > 4000) missing.delete(missing.keys().next().value);
+    return TRANSPARENT_PNG;
+  }
+
   function json(res, status, body) {
     res.writeHead(status, {
       'Content-Type': 'application/json; charset=utf-8',
@@ -256,10 +293,16 @@ export function brazilRadarProxy({
         const value = await loadCatalog();
         const radar = value.radars.find((r) => r.id === id);
         if (!radar) return json(res, 404, { error: 'unknown_radar' });
-        const bytes = await loadFrame(radar, stamp);
+        const bytes =
+          stamp === radar.stamp
+            ? await loadFrame(radar, stamp)
+            : await loadPastFrame(radar, stamp);
         res.writeHead(200, {
           'Content-Type': 'image/png',
-          'Cache-Control': 'public, max-age=86400, immutable',
+          'Cache-Control':
+            bytes === TRANSPARENT_PNG
+              ? 'public, max-age=600'
+              : 'public, max-age=86400, immutable',
           'X-Content-Type-Options': 'nosniff',
         });
         return res.end(bytes);

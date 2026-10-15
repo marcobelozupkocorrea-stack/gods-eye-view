@@ -12,6 +12,8 @@ const LEFT_STACK_OBSTACLE_SELECTOR = [
   '#cockpit-hud .cockpit-topline',
   '#cockpit-hud .cockpit-topline > div',
   '#title-bar',
+  // barreto.top: the place search and "Você está vendo" sit above the stack.
+  '#barreto-searchbar',
   '#style-indicator',
   '#top-center-actions',
   '#traffic-sync-chip',
