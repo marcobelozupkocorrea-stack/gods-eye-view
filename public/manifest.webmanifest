@@ -1,7 +1,7 @@
 {
   "id": "/?origem=app",
-  "name": "Barreto · Monitoramento",
-  "short_name": "Barreto",
+  "name": "ABC World View",
+  "short_name": "ABC World View",
   "description": "Mapa de monitoramento em tempo real: alertas do Brasil, voos, navios, câmeras e clima.",
   "lang": "pt-BR",
   "start_url": "/?origem=app",

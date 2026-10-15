@@ -151,7 +151,7 @@ self.addEventListener('push', (event) => {
   }
   const extreme = Number(data.rank) >= 3;
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Barreto', {
+    self.registration.showNotification(data.title || 'ABC World View', {
       body: data.body || '',
       icon: '/icons/icon-192.png',
       badge: '/icons/badge-96.png',

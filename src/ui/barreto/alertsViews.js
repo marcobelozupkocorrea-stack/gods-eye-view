@@ -941,7 +941,7 @@ export function createHistoryView({ signal }) {
     const since = data.gravadoDesde
       ? el('p', {
           className: 'al-muted al-small',
-          text: `Histórico gravado pelo Barreto desde ${dateTimeText(data.gravadoDesde)} (INMET, Defesa Civil e Cemaden).${data.total > data.itens.length ? ` Lista mostra os ${data.itens.length} mais recentes.` : ''}`,
+          text: `Histórico gravado pelo ABC World View desde ${dateTimeText(data.gravadoDesde)} (INMET, Defesa Civil e Cemaden).${data.total > data.itens.length ? ` Lista mostra os ${data.itens.length} mais recentes.` : ''}`,
         })
       : null;
     out.replaceChildren(

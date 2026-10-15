@@ -3416,7 +3416,7 @@ html[lang^='pt'] #cctv-sync-chip * {
   letter-spacing: 0.02em !important;
 }
 
-/* Brand: "Barreto" with a quiet subtitle, no spaced-out capitals. */
+/* Brand: "ABC World View" with a quiet subtitle, no spaced-out capitals. */
 html[lang^='pt'] #title-bar h1 {
   gap: 10px;
   font: 700 21px/1 var(--font-sans);

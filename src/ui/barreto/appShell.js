@@ -663,7 +663,7 @@ export function initAppShell({
       close();
       if (globalThis.navigator?.share) {
         globalThis.navigator
-          .share({ title: 'Barreto', url: globalThis.location.href })
+          .share({ title: 'ABC World View', url: globalThis.location.href })
           .catch(() => {});
       } else clickById('share-btn');
     } else if (act === 'clear') {
@@ -699,7 +699,7 @@ export function initAppShell({
   on(globalThis, 'appinstalled', () => {
     installPrompt = null;
     installBtn.hidden = true;
-    showNotice('App instalado. Abra pelo ícone "Barreto".');
+    showNotice('App instalado. Abra pelo ícone "ABC World View".');
   });
   async function promptInstall() {
     if (!installPrompt) return;

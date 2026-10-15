@@ -445,7 +445,7 @@ export function createPush({
   async function test(hash) {
     const user = await readUser(hash);
     return sendTo(hash, user, {
-      title: 'Barreto · notificações ligadas',
+      title: 'ABC World View · notificações ligadas',
       body: 'É assim que os alertas vão chegar neste aparelho.',
       tag: 'teste',
       url: '/?origem=notificacao&abrir=alertas',

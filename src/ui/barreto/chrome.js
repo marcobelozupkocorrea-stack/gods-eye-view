@@ -90,11 +90,11 @@ export function translateChrome() {
   // barreto.top branding: the product name the team uses. The original
   // project is credited in the "Como usar" guide.
   const titleText = document.querySelector('#title-bar h1 > span:last-child');
-  if (titleText) titleText.textContent = 'Barreto';
+  if (titleText) titleText.textContent = 'ABC World View';
   const subtitle = document.querySelector('#title-bar .subtitle');
   if (subtitle) subtitle.textContent = 'Monitoramento em tempo real';
   const loaderTitle = document.querySelector('#loading-screen h2');
-  if (loaderTitle) loaderTitle.textContent = 'Barreto';
+  if (loaderTitle) loaderTitle.textContent = 'ABC World View';
   for (const button of document.querySelectorAll('.style-btn[data-style]')) {
     const text = STYLE_TEXT[button.dataset.style];
     if (!text) continue;
@@ -102,7 +102,7 @@ export function translateChrome() {
     if (label) label.textContent = text[0];
     button.title = text[1];
   }
-  document.title = 'Barreto · Monitoramento';
+  document.title = 'ABC World View · Monitoramento';
   const search = document.getElementById('location-search');
   if (search) {
     search.placeholder = 'Buscar cidade, endereço ou coordenada…';
