@@ -101,6 +101,9 @@ const SECTIONS = [
       '<b>iPhone (Safari):</b> botão <b>Compartilhar</b> → <b>Adicionar à Tela de Início</b>.',
       '<b>Computador (Chrome/Edge):</b> ícone de instalar na barra de endereço.',
       'O app abre em tela cheia, direto no mapa, com o mesmo login.',
+      '<b>No celular:</b> a barra de baixo tem <b>Mapa · Alertas · Camadas · Rota · Mais</b>. Cada uma abre uma folha: arraste a alça para cima para ver tudo, para baixo (ou o botão Voltar) para fechar.',
+      'À direita do mapa: <span class="ms">my_location</span> sua localização, <b>2D/3D</b> e a bússola (aparece quando o mapa está girado; toque para apontar ao norte).',
+      'Segure o ícone do app na tela inicial para atalhos: Alertas, Rota, Buscar e Camadas. Sem internet, o app avisa e volta sozinho.',
     ],
   },
   {

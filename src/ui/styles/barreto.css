@@ -1775,3 +1775,831 @@ body.barreto-route-open #barreto-details {
   outline: none !important;
   box-shadow: none !important;
 }
+
+/* =====================================================================
+   Phone / installed app shell (src/ui/barreto/appShell.js)
+   Everything here is keyed on body.barreto-app, set from JS for phones
+   (and phones on their side); the desktop layout is untouched.
+   ===================================================================== */
+#barreto-tabbar,
+#barreto-map-fabs,
+#barreto-sheet-grip,
+#barreto-more,
+#barreto-app-notice {
+  display: none;
+}
+
+html,
+body {
+  overscroll-behavior: none;
+}
+
+body.barreto-app {
+  --app-safe-top: env(safe-area-inset-top, 0px);
+  --app-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --app-safe-left: env(safe-area-inset-left, 0px);
+  --app-safe-right: env(safe-area-inset-right, 0px);
+  --barreto-tabbar-core: 62px;
+  --barreto-tabbar-h: calc(var(--barreto-tabbar-core) + var(--app-safe-bottom));
+  --barreto-sheet-h: 56dvh;
+  --barreto-sheet-bg: rgba(9, 14, 21, 0.97);
+  --barreto-sheet-line: rgba(140, 200, 255, 0.14);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+body.barreto-app input,
+body.barreto-app textarea,
+body.barreto-app .barreto-details-body,
+body.barreto-app #barreto-details {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+body.barreto-app.barreto-sheet-full {
+  --barreto-sheet-h: calc(
+    100dvh - var(--app-safe-top) - var(--barreto-tabbar-h) - 34px
+  );
+}
+
+body.barreto-app button,
+body.barreto-app a {
+  touch-action: manipulation;
+}
+
+/* ---- Desktop chrome that the app shell replaces ---- */
+body.barreto-app #top-center-actions,
+body.barreto-app #title-bar,
+body.barreto-app #command-dock,
+body.barreto-app #intel-hud,
+body.barreto-app #orbit-indicator,
+body.barreto-app #style-indicator,
+body.barreto-app #barreto-more-panels,
+body.barreto-app .panel-resize-handle {
+  display: none !important;
+}
+
+/* ---- Search on top, under the status bar ---- */
+body.barreto-app .barreto-searchbar {
+  top: calc(var(--app-safe-top) + 10px) !important;
+  right: calc(var(--app-safe-right) + 12px) !important;
+  left: calc(var(--app-safe-left) + 12px) !important;
+  width: auto !important;
+  max-width: 560px;
+}
+
+body.barreto-app .barreto-searchbar-pill {
+  min-height: 50px;
+  border-radius: 25px;
+  box-shadow:
+    0 6px 22px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(140, 200, 255, 0.16);
+}
+
+body.barreto-app .barreto-searchbar-pill input {
+  font-size: 16px; /* no iOS zoom on focus */
+}
+
+body.barreto-app.barreto-route-open .barreto-searchbar {
+  display: block;
+}
+
+body.barreto-app.barreto-sheet-full .barreto-searchbar,
+body.barreto-app.barreto-sheet-full #barreto-map-fabs {
+  visibility: hidden;
+}
+
+/* ---- Map buttons (right side) ---- */
+body.barreto-app #barreto-map-fabs {
+  position: fixed;
+  z-index: 140;
+  top: calc(var(--app-safe-top) + 112px);
+  right: calc(var(--app-safe-right) + 12px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: opacity 160ms ease;
+}
+
+body.barreto-app.barreto-sheet-open:not(.barreto-landscape) #barreto-map-fabs {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.barreto-fab {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  color: var(--text-primary);
+  background: rgba(9, 14, 21, 0.9);
+  border: 1px solid rgba(140, 200, 255, 0.18);
+  border-radius: 50%;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+}
+
+.barreto-fab[hidden] {
+  display: none;
+}
+
+.barreto-fab:active {
+  transform: scale(0.94);
+}
+
+.barreto-fab .material-symbols-outlined {
+  font-size: 22px;
+}
+
+.barreto-fab-locate {
+  color: var(--accent);
+}
+
+.barreto-fab-locate.busy .material-symbols-outlined {
+  animation: barreto-pulse 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes barreto-pulse {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0.25;
+  }
+}
+
+.barreto-fab-text {
+  font: 800 13px/1 var(--font-sans);
+  letter-spacing: 0.02em;
+}
+
+.barreto-compass-needle {
+  position: relative;
+  display: block;
+  width: 26px;
+  height: 26px;
+  transition: transform 120ms linear;
+}
+
+.barreto-compass-needle i {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  width: 0;
+  height: 0;
+  margin-left: -5px;
+  border-right: 5px solid transparent;
+  border-bottom: 11px solid #ff4d4d;
+  border-left: 5px solid transparent;
+}
+
+.barreto-compass-needle i::after {
+  position: absolute;
+  top: 11px;
+  left: -5px;
+  border-top: 11px solid #c8d3dc;
+  border-right: 5px solid transparent;
+  border-left: 5px solid transparent;
+  content: '';
+}
+
+.barreto-compass-needle b {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ff6b6b;
+  font: 800 8px/1 var(--font-sans);
+}
+
+/* ---- Tab bar ---- */
+body.barreto-app #barreto-tabbar {
+  position: fixed;
+  z-index: 230;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  height: var(--barreto-tabbar-h);
+  padding: 0 var(--app-safe-right) var(--app-safe-bottom) var(--app-safe-left);
+  background: rgba(7, 11, 17, 0.96);
+  border-top: 1px solid var(--barreto-sheet-line);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+
+body.barreto-app.barreto-typing #barreto-tabbar {
+  display: none;
+}
+
+.barreto-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 6px 0 4px;
+  color: var(--text-secondary);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.barreto-tab-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 30px;
+  border-radius: 15px;
+  transition: background-color 180ms ease;
+}
+
+.barreto-tab-icon .material-symbols-outlined {
+  font-size: 23px;
+  font-variation-settings: 'FILL' 0;
+}
+
+.barreto-tab-label {
+  overflow: hidden;
+  max-width: 100%;
+  font: 600 11.5px/1.1 var(--font-sans);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.barreto-tab[aria-pressed='true'] {
+  color: var(--text-primary);
+}
+
+.barreto-tab[aria-pressed='true'] .barreto-tab-icon {
+  color: var(--accent);
+  background: rgba(57, 208, 255, 0.16);
+}
+
+.barreto-tab[aria-pressed='true'] .barreto-tab-icon .material-symbols-outlined {
+  font-variation-settings: 'FILL' 1;
+}
+
+.barreto-tab:active .barreto-tab-icon {
+  background: rgba(57, 208, 255, 0.24);
+}
+
+.barreto-tab-badge {
+  position: absolute;
+  top: -2px;
+  left: calc(50% + 5px);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  color: #001018;
+  font: 700 10.5px/18px var(--font-sans);
+  text-align: center;
+  background: var(--accent);
+  border: 2px solid rgba(7, 11, 17, 0.96);
+  border-radius: 9px;
+}
+
+.barreto-tab-badge[hidden] {
+  display: none;
+}
+
+.barreto-tab-badge.hot {
+  color: #fff;
+  background: #ff3b30;
+}
+
+/* ---- Sheets: one at a time, above the tab bar ---- */
+body.barreto-app #left-panel-stack,
+body.barreto-app #right-context-rail {
+  display: none !important;
+}
+
+body.barreto-app #left-panel-stack.barreto-sheet-host,
+body.barreto-app #right-context-rail.barreto-sheet-host,
+body.barreto-app #barreto-more,
+body.barreto-app #barreto-route {
+  position: fixed !important;
+  z-index: 200 !important;
+  top: auto !important;
+  right: 0 !important;
+  bottom: var(--barreto-tabbar-h) !important;
+  left: 0 !important;
+  display: flex !important;
+  flex-direction: column;
+  width: auto !important;
+  max-width: none !important;
+  height: var(--barreto-sheet-h) !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 22px var(--app-safe-right) 0 var(--app-safe-left) !important;
+  overflow: hidden !important;
+  background: var(--barreto-sheet-bg) !important;
+  border: 0 !important;
+  border-top: 1px solid var(--barreto-sheet-line) !important;
+  border-radius: 20px 20px 0 0 !important;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5) !important;
+  transform: translateY(var(--barreto-sheet-drag, 0px)) !important;
+  transition:
+    height 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: barreto-sheet-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+body.barreto-app #barreto-more[hidden],
+body.barreto-app #barreto-route[hidden] {
+  display: none !important;
+}
+
+body.barreto-app.barreto-sheet-dragging #left-panel-stack,
+body.barreto-app.barreto-sheet-dragging #right-context-rail,
+body.barreto-app.barreto-sheet-dragging #barreto-more,
+body.barreto-app.barreto-sheet-dragging #barreto-route,
+body.barreto-app.barreto-sheet-dragging #barreto-sheet-grip {
+  transition: none !important;
+}
+
+@keyframes barreto-sheet-in {
+  from {
+    transform: translateY(40%);
+    opacity: 0.4;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+body.barreto-app .barreto-sheet-host > :not(.barreto-sheet-panel) {
+  display: none !important;
+}
+
+body.barreto-app .barreto-sheet-host > .barreto-sheet-panel {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  flex-direction: column;
+  width: 100% !important;
+  max-width: none !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+body.barreto-app .barreto-sheet-panel > .panel-inner,
+body.barreto-app .barreto-sheet-panel .panel-inner {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  max-height: none !important;
+}
+
+body.barreto-app .barreto-sheet-panel .panel-content,
+body.barreto-app .barreto-sheet-panel .panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 16px;
+}
+
+body.barreto-app .barreto-sheet-panel .panel-glow {
+  display: none;
+}
+
+/* The sheet's title row reads like an app header. */
+body.barreto-app .barreto-sheet-panel .panel-header {
+  padding-top: 0;
+}
+
+body.barreto-app .barreto-sheet-panel .panel-title {
+  color: var(--text-primary) !important;
+  font-size: 13px;
+  opacity: 1 !important;
+}
+
+body.barreto-app .barreto-sheet-panel .panel-collapse-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+}
+
+/* ---- Grip ---- */
+body.barreto-app.barreto-sheet-open #barreto-sheet-grip {
+  position: fixed;
+  z-index: 205;
+  right: 70px;
+  bottom: calc(var(--barreto-tabbar-h) + var(--barreto-sheet-h) - 26px);
+  left: 70px;
+  display: grid;
+  place-items: center;
+  height: 28px;
+  cursor: grab;
+  touch-action: none;
+  transform: translateY(var(--barreto-sheet-drag, 0px));
+  transition:
+    bottom 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+#barreto-sheet-grip span {
+  width: 40px;
+  height: 5px;
+  background: rgba(200, 220, 235, 0.45);
+  border-radius: 3px;
+}
+
+#barreto-sheet-grip:focus-visible span {
+  background: var(--accent);
+}
+
+/* ---- Route planner as a sheet ---- */
+body.barreto-app #barreto-route {
+  padding-top: 18px !important;
+}
+
+body.barreto-app #barreto-route > * {
+  flex: 0 0 auto;
+}
+
+body.barreto-app #barreto-route .barreto-route-scroll,
+body.barreto-app #barreto-route .barreto-route-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ---- "Mais" ---- */
+body.barreto-app #barreto-more .barreto-more-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 2px 16px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.barreto-more-h {
+  margin: 16px 0 8px;
+  color: var(--text-secondary);
+  font: 700 11.5px var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.barreto-more-h:first-child {
+  margin-top: 4px;
+}
+
+.barreto-more-styles {
+  display: flex;
+  gap: 8px;
+  margin: 0 -16px;
+  padding: 2px 16px 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.barreto-more-styles::-webkit-scrollbar {
+  display: none;
+}
+
+.barreto-style {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 74px;
+  height: 66px;
+  color: var(--text-secondary);
+  font: 600 11px var(--font-sans);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(140, 200, 255, 0.14);
+  border-radius: 12px;
+}
+
+.barreto-style-icon {
+  display: grid;
+  place-items: center;
+  height: 24px;
+  font-size: 20px;
+}
+
+.barreto-style-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.barreto-style[aria-pressed='true'] {
+  color: var(--text-primary);
+  background: rgba(57, 208, 255, 0.14);
+  border-color: var(--accent);
+}
+
+.barreto-more-sources,
+.barreto-more-cities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.barreto-more-sources {
+  margin-top: 10px;
+}
+
+.barreto-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  color: var(--text-primary);
+  font: 500 13.5px var(--font-sans);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(140, 200, 255, 0.16);
+  border-radius: 18px;
+}
+
+.barreto-chip .material-symbols-outlined {
+  margin-left: -4px;
+  color: var(--accent);
+  font-size: 18px;
+}
+
+.barreto-chip[aria-pressed='true'] {
+  color: #001018;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.barreto-chip:disabled {
+  opacity: 0.4;
+}
+
+.barreto-source {
+  min-height: 32px;
+  font-size: 12px;
+  text-transform: none;
+}
+
+.barreto-more-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.barreto-more-grid > button,
+.barreto-more-grid > a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 12px;
+  color: var(--text-primary);
+  font: 500 13.5px/1.25 var(--font-sans);
+  text-align: left;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(140, 200, 255, 0.12);
+  border-radius: 12px;
+}
+
+.barreto-more-grid > [hidden] {
+  display: none;
+}
+
+.barreto-more-grid .material-symbols-outlined {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-size: 22px;
+}
+
+.barreto-more-grid > button:active,
+.barreto-more-grid > a:active,
+.barreto-chip:active,
+.barreto-style:active {
+  background: rgba(57, 208, 255, 0.2);
+}
+
+.barreto-more-grid > [data-act='logout'] .material-symbols-outlined {
+  color: #ff8a80;
+}
+
+.barreto-more-ios {
+  margin: 16px 0 0;
+  padding: 12px;
+  color: var(--text-secondary);
+  font: 13px/1.45 var(--font-sans);
+  background: rgba(57, 208, 255, 0.08);
+  border-radius: 12px;
+}
+
+.barreto-more-ios[hidden] {
+  display: none;
+}
+
+.barreto-more-ios .material-symbols-outlined {
+  font-size: 18px;
+  vertical-align: -4px;
+}
+
+/* ---- Things that float over the map ---- */
+body.barreto-app #cesium-credits.barreto-credits {
+  right: auto !important;
+  bottom: calc(var(--barreto-tabbar-h) + 6px) !important;
+  left: calc(var(--app-safe-left) + 8px) !important;
+  max-width: calc(100vw - 90px);
+}
+
+/* The map credits stay on screen (Cesium / Google terms): with a sheet open
+   they sit on its top edge. */
+body.barreto-app #cesium-credits.barreto-credits {
+  z-index: 206;
+}
+
+body.barreto-app.barreto-sheet-open #cesium-credits.barreto-credits {
+  bottom: calc(
+    var(--barreto-tabbar-h) + var(--barreto-sheet-h) + 4px
+  ) !important;
+  transform: translateY(var(--barreto-sheet-drag, 0px));
+}
+
+body.barreto-app #barreto-details {
+  z-index: 215 !important;
+  top: auto !important;
+  right: calc(var(--app-safe-right) + 8px) !important;
+  bottom: calc(var(--barreto-tabbar-h) + 8px) !important;
+  left: calc(var(--app-safe-left) + 8px) !important;
+  width: auto !important;
+  max-height: 60dvh !important;
+}
+
+body.barreto-app #toast {
+  bottom: calc(var(--barreto-tabbar-h) + 16px) !important;
+}
+
+body.barreto-app #global-loading-status,
+body.barreto-app #traffic-sync-chip,
+body.barreto-app #cctv-sync-chip {
+  top: calc(var(--app-safe-top) + 100px) !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: calc(var(--app-safe-left) + 12px) !important;
+  max-width: calc(100vw - 90px);
+  transform: none !important;
+}
+
+body.barreto-app.barreto-sheet-full #global-loading-status,
+body.barreto-app.barreto-sheet-full #traffic-sync-chip,
+body.barreto-app.barreto-sheet-full #cctv-sync-chip {
+  visibility: hidden;
+}
+
+body.barreto-app #barreto-session {
+  top: calc(var(--app-safe-top) + 10px);
+}
+
+body.barreto-app #barreto-help {
+  z-index: 260;
+}
+
+body.barreto-app #barreto-help .barreto-help-card {
+  max-height: calc(
+    100dvh - var(--app-safe-top) - var(--app-safe-bottom) - 24px
+  );
+}
+
+body.barreto-app #barreto-app-notice:not([hidden]) {
+  position: fixed;
+  z-index: 240;
+  right: calc(var(--app-safe-right) + 12px);
+  bottom: calc(var(--barreto-tabbar-h) + 14px);
+  left: calc(var(--app-safe-left) + 12px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  color: var(--text-primary);
+  font: 14px/1.35 var(--font-sans);
+  background: rgba(22, 30, 40, 0.98);
+  border: 1px solid rgba(140, 200, 255, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  animation: barreto-sheet-in 200ms ease-out;
+}
+
+body.barreto-app.barreto-sheet-open #barreto-app-notice:not([hidden]) {
+  bottom: calc(var(--barreto-tabbar-h) + var(--barreto-sheet-h) + 10px);
+}
+
+#barreto-app-notice span {
+  flex: 1 1 auto;
+}
+
+#barreto-app-notice button {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  color: #001018;
+  font: 700 13px var(--font-sans);
+  background: var(--accent);
+  border: 0;
+  border-radius: 8px;
+}
+
+/* ---- Phone on its side: sheet as a side panel, slimmer bars ---- */
+body.barreto-app.barreto-landscape {
+  --barreto-tabbar-core: 52px;
+  --barreto-sheet-h: calc(
+    100dvh - var(--app-safe-top) - var(--barreto-tabbar-h) - 8px
+  );
+}
+
+body.barreto-app.barreto-landscape #barreto-tabbar {
+  right: auto;
+  width: min(460px, 60vw);
+  border-right: 1px solid var(--barreto-sheet-line);
+  border-radius: 0 16px 0 0;
+}
+
+body.barreto-app.barreto-landscape .barreto-tab {
+  flex-direction: row;
+  gap: 4px;
+}
+
+body.barreto-app.barreto-landscape .barreto-tab-icon {
+  width: 34px;
+}
+
+body.barreto-app.barreto-landscape .barreto-tab-badge {
+  top: -4px;
+  left: 20px;
+}
+
+body.barreto-app.barreto-landscape .barreto-tab-label {
+  font-size: 11px;
+}
+
+body.barreto-app.barreto-landscape #left-panel-stack.barreto-sheet-host,
+body.barreto-app.barreto-landscape #right-context-rail.barreto-sheet-host,
+body.barreto-app.barreto-landscape #barreto-more,
+body.barreto-app.barreto-landscape #barreto-route {
+  right: auto !important;
+  width: min(460px, 60vw) !important;
+  border-radius: 0 20px 0 0 !important;
+}
+
+body.barreto-app.barreto-landscape #barreto-sheet-grip {
+  display: none !important;
+}
+
+body.barreto-app.barreto-landscape .barreto-searchbar {
+  right: auto !important;
+  width: min(420px, 50vw) !important;
+}
+
+body.barreto-app.barreto-landscape.barreto-sheet-open .barreto-searchbar {
+  visibility: hidden;
+}
+
+body.barreto-app.barreto-landscape #barreto-map-fabs {
+  top: calc(var(--app-safe-top) + 12px);
+}
+
+body.barreto-app.barreto-landscape #cesium-credits.barreto-credits,
+body.barreto-app.barreto-landscape.barreto-sheet-open
+  #cesium-credits.barreto-credits {
+  right: calc(var(--app-safe-right) + 8px) !important;
+  bottom: 6px !important;
+  left: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.barreto-app #left-panel-stack.barreto-sheet-host,
+  body.barreto-app #right-context-rail.barreto-sheet-host,
+  body.barreto-app #barreto-more,
+  body.barreto-app #barreto-route,
+  body.barreto-app #barreto-app-notice {
+    transition: none !important;
+    animation: none !important;
+  }
+}

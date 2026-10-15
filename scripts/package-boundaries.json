@@ -2255,7 +2255,10 @@
       "src/ui/barreto/placeInput.js",
       "src/ui/barreto/routeCorridor.js",
       "src/ui/barreto/searchBar.js",
-      "src/ui/barreto/routePlanner.js"
+      "src/ui/barreto/routePlanner.js",
+      "src/ui/barreto/pwa.js",
+      "src/ui/barreto/appShellLogic.js",
+      "src/ui/barreto/appShell.js"
     ],
     "external": [
       "hls.js",

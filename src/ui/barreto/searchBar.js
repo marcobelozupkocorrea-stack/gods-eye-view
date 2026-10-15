@@ -110,8 +110,10 @@ export function initSearchBar({ styleManager, routePlanner, signal } = {}) {
     pin = v.entities.add({
       position: Cesium.Cartesian3.fromDegrees(place.lon, place.lat, 0),
       point: {
-        pixelSize: 12,
-        color: Cesium.Color.fromCssColorString('#ff375f'),
+        pixelSize: place.myLocation ? 14 : 12,
+        color: Cesium.Color.fromCssColorString(
+          place.myLocation ? '#2f8cff' : '#ff375f',
+        ),
         outlineColor: Cesium.Color.WHITE,
         outlineWidth: 2,
         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
@@ -291,5 +293,12 @@ export function initSearchBar({ styleManager, routePlanner, signal } = {}) {
   return {
     focus: () => input.focus(),
     clearOutline,
+    /** Fly to a place and mark it (used by "minha localização" and cities). */
+    showPlace(place, { range, pin = true } = {}) {
+      flyToPlace(viewer(), place, {
+        range: range ?? (place?.myLocation ? 1500 : 2500),
+      });
+      if (pin) placePin(place);
+    },
   };
 }

@@ -239,11 +239,18 @@ const VETTED_VARS = new Set([
   '--dock-presets-pinned-height',
 ]);
 
+// barreto.top phone shell (src/ui/barreto/appShell.js): body.barreto-app is a
+// separate layout with no command dock and the rail as a bottom sheet, so the
+// dock geometry above does not describe it. Those rules are pinned on their
+// own by "the phone app shell keeps the credit on screen" below.
+const APP_SHELL = /^body\.barreto-app[\s.]/;
+
 /** Rules whose final compound targets a modelled element (pseudo-elements aside). */
 function ownBoxEntries() {
   const entries = [];
   for (const rule of RULES) {
     for (const part of rule.parts) {
+      if (APP_SHELL.test(part)) continue;
       const compound = lastCompound(part);
       if (!ELEMENT_KEYS.some((key) => compound.includes(key))) continue;
       if (compound.includes('::')) continue; // a pseudo-element is its own box
@@ -621,6 +628,30 @@ test('the credit line is never suppressed to make room', () => {
   assert.match(css, /body\.ui-clean-view #cesium-credits,\s*\n\s*body\.recording-mode #cesium-credits \{[^}]*bottom: 36px;/);
 });
 
+
+test('the phone app shell keeps the credit on screen', () => {
+  const app = RULES.filter((rule) => rule.parts.some((part) => APP_SHELL.test(part)
+    && lastCompound(part).includes('#cesium-credits')));
+  assert.ok(app.length >= 2, 'the app shell positions the credit');
+  for (const rule of app) {
+    for (const decl of rule.decls) {
+      assert.ok(!(decl.prop === 'display' && decl.value === 'none'), 'never display:none');
+      assert.ok(!(decl.prop === 'visibility' && decl.value === 'hidden'), 'never hidden');
+      assert.ok(!(decl.prop === 'opacity' && Number.parseFloat(decl.value) < 0.4), 'never faded out');
+    }
+  }
+  const bottomOf = (selector) => app.find((rule) => rule.parts.includes(selector))
+    ?.decls.find((decl) => decl.prop === 'bottom')?.value
+    .replace(/\s+/g, ' ').replace(/\( /g, '(').replace(/ \)/g, ')');
+  // Above the tab bar on the map, above the sheet's top edge when one is open.
+  assert.match(bottomOf('body.barreto-app #cesium-credits.barreto-credits'),
+    /^calc\(var\(--barreto-tabbar-h\) \+ \d+px\)$/);
+  assert.match(bottomOf('body.barreto-app.barreto-sheet-open #cesium-credits.barreto-credits'),
+    /^calc\(var\(--barreto-tabbar-h\) \+ var\(--barreto-sheet-h\) \+ \d+px\)$/);
+  // The dock it would otherwise collide with is gone in that layout.
+  assert.ok(RULES.some((rule) => rule.parts.includes('body.barreto-app #command-dock')
+    && rule.decls.some((decl) => decl.prop === 'display' && decl.value === 'none')));
+});
 
 test('OSM-derived layers never force the desktop credit row into a stack', () => {
   assert.doesNotMatch(css, /body:has\([^)]*alpr-cameras[^}]*#cesium-credits/);

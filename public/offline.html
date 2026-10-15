@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#05090f" />
+    <title>Barreto · sem conexão</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        padding-top: max(24px, env(safe-area-inset-top));
+        background: radial-gradient(circle at 50% 30%, #0d2233, #05090f 70%);
+        color: #e8f1f8;
+        font:
+          16px/1.5 system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        text-align: center;
+      }
+      main {
+        max-width: 340px;
+      }
+      img {
+        width: 84px;
+        height: 84px;
+        border-radius: 20px;
+      }
+      h1 {
+        margin: 18px 0 6px;
+        font-size: 22px;
+      }
+      p {
+        margin: 0 0 22px;
+        color: #9fb3c4;
+      }
+      button {
+        width: 100%;
+        padding: 14px;
+        border: 0;
+        border-radius: 12px;
+        background: #39d0ff;
+        color: #001018;
+        font:
+          700 16px system-ui,
+          sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icons/icon-192.png" alt="" />
+      <h1>Sem conexão</h1>
+      <p>
+        O Barreto precisa de internet para mostrar o mapa e os alertas. Assim
+        que a conexão voltar, ele abre sozinho.
+      </p>
+      <button type="button" onclick="location.reload()">Tentar de novo</button>
+    </main>
+    <script>
+      addEventListener('online', function () {
+        location.reload();
+      });
+    </script>
+  </body>
+</html>

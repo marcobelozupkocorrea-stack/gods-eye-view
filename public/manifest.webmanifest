@@ -1,4 +1,5 @@
 {
+  "id": "/?origem=app",
   "name": "Barreto · Monitoramento",
   "short_name": "Barreto",
   "description": "Mapa de monitoramento em tempo real: alertas do Brasil, voos, navios, câmeras e clima.",
@@ -28,6 +29,78 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "display_override": ["standalone", "minimal-ui"],
+  "shortcuts": [
+    {
+      "name": "Alertas do Brasil",
+      "short_name": "Alertas",
+      "description": "Abrir os alertas ativos agora",
+      "url": "/?origem=app&abrir=alertas",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Planejar rota",
+      "short_name": "Rota",
+      "description": "Rota com trânsito ao vivo",
+      "url": "/?origem=app&abrir=rota",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Buscar lugar",
+      "short_name": "Buscar",
+      "url": "/?origem=app&abrir=busca",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Camadas do mapa",
+      "short_name": "Camadas",
+      "url": "/?origem=app&abrir=camadas",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icons/screen-alertas.jpg",
+      "sizes": "390x844",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Alertas do Brasil agora"
+    },
+    {
+      "src": "/icons/screen-rota.jpg",
+      "sizes": "390x844",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Rota com trânsito ao vivo"
+    },
+    {
+      "src": "/icons/screen-mais.jpg",
+      "sizes": "390x844",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Estilos do mapa, cidades e painéis"
     }
   ]
 }
