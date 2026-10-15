@@ -64,6 +64,11 @@ export function assetCacheHeaders() {
     // The dev server never serves hashed /assets/ files, so this is inert there.
     configureServer: install,
     configurePreviewServer: install,
+    // And the engine script must not block the first paint (see below).
+    transformIndexHtml: {
+      order: 'post',
+      handler: (html) => deferCesiumScript(html),
+    },
   };
 }
 
@@ -79,11 +84,4 @@ export function deferCesiumScript(html) {
     /<script src="(\/cesium\/Cesium\.js)"><\/script>/,
     '<script defer src="$1"></script>',
   );
-}
-
-export function deferCesiumPlugin() {
-  return {
-    name: 'barreto-defer-cesium',
-    transformIndexHtml: { order: 'post', handler: deferCesiumScript },
-  };
 }
