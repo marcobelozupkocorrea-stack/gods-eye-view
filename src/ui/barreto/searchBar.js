@@ -10,6 +10,7 @@
  */
 import * as Cesium from 'cesium';
 import { attachPlaceInput } from './placeInput.js';
+import { openFormSheet } from './formSheet.js';
 import {
   addFavorite,
   cameraView,
@@ -150,11 +151,22 @@ export function initSearchBar({ styleManager, routePlanner, signal } = {}) {
     onAction: (id, place) => {
       if (id === 'route') routePlanner?.setDestination(place);
       if (id === 'save') {
-        const name = globalThis.prompt?.(
-          'Nome para este lugar (ex.: Casa, Trabalho):',
-          place.name,
-        );
-        if (name && name.trim()) void addFavorite(place, name.trim());
+        void openFormSheet({
+          title: 'Salvar lugar',
+          fields: [
+            {
+              name: 'nome',
+              label: 'Nome',
+              value: place.name || '',
+              placeholder: 'Casa, Trabalho, Escola…',
+              maxLength: 40,
+              required: true,
+            },
+          ],
+          submitLabel: 'Salvar',
+        }).then((values) => {
+          if (values?.nome) void addFavorite(place, values.nome);
+        });
       }
     },
     onPick: async (place) => {

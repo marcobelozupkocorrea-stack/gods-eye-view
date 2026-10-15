@@ -24,6 +24,13 @@ const ringPositions = (ring) =>
   ring.map(([lon, lat]) => Cesium.Cartesian3.fromDegrees(lon, lat));
 
 /** INMET weather warnings (Brazil). */
+/** Warning fill by camera height: visible from afar, faint over a city. */
+export const FILL_ALPHA = Object.freeze({ far: 0.18, mid: 0.1, near: 0.035 });
+export function fillBandFor(height) {
+  if (!Number.isFinite(height) || height > 200_000) return 'far';
+  return height > 40_000 ? 'mid' : 'near';
+}
+
 export function createInmetAlertsLayer(options = {}) {
   return createCapAlertsLayer({
     id: 'inmet-alerts',
@@ -80,6 +87,20 @@ export function createCapAlertsLayer({
   const PICK_PREFIX = `${id}:`;
   const OVERLAY_ID = overlaySourceId;
   let _viewer = null;
+  let _fillBand = 'far';
+  let _removeCameraWatch = null;
+  function applyFillBand() {
+    const height = _viewer?.camera?.positionCartographic?.height;
+    const band = fillBandFor(height);
+    if (band === _fillBand || !_dataSource) return;
+    _fillBand = band;
+    for (const entity of _dataSource.entities.values)
+      if (entity.polygon && entity.barretoFill)
+        entity.polygon.material = new Cesium.ColorMaterialProperty(
+          entity.barretoFill.withAlpha(FILL_ALPHA[band]),
+        );
+    _viewer?.scene?.requestRender?.();
+  }
   let _request = null;
   let _dataSource = null;
   let _signature = null;
@@ -210,6 +231,11 @@ export function createCapAlertsLayer({
     init(viewer) {
       if (_viewer) throw new Error(`${name} layer is already initialized`);
       _viewer = viewer;
+      // barreto.top: up close a big warning polygon would tint the whole
+      // street view; the fill fades by camera height, the outline stays.
+      _removeCameraWatch = viewer.camera?.changed?.addEventListener?.(() =>
+        applyFillBand(),
+      );
       _dataSource = new Cesium.CustomDataSource(id);
       _dataSource.show = false;
       viewer.dataSources.add(_dataSource);
@@ -259,25 +285,25 @@ export function createCapAlertsLayer({
             const color = Cesium.Color.fromCssColorString(alertAccent(row));
             for (const [index, rings] of row.polygons.entries()) {
               const outer = ringPositions(rings[0]);
-              entities.push(
-                new Cesium.Entity({
-                  id: `${PICK_PREFIX}${row.stableId}:${index}`,
-                  polygon: {
-                    hierarchy: new Cesium.PolygonHierarchy(outer),
-                    material: new Cesium.ColorMaterialProperty(
-                      color.withAlpha(0.18),
-                    ),
-                  },
-                  polyline: {
-                    positions: outer,
-                    clampToGround: true,
-                    width: 2,
-                    material: new Cesium.ColorMaterialProperty(
-                      color.withAlpha(0.85),
-                    ),
-                  },
-                }),
-              );
+              const entity = new Cesium.Entity({
+                id: `${PICK_PREFIX}${row.stableId}:${index}`,
+                polygon: {
+                  hierarchy: new Cesium.PolygonHierarchy(outer),
+                  material: new Cesium.ColorMaterialProperty(
+                    color.withAlpha(FILL_ALPHA[_fillBand]),
+                  ),
+                },
+                polyline: {
+                  positions: outer,
+                  clampToGround: true,
+                  width: 2,
+                  material: new Cesium.ColorMaterialProperty(
+                    color.withAlpha(0.85),
+                  ),
+                },
+              });
+              entity.barretoFill = color;
+              entities.push(entity);
             }
             const { polygons, ...facts } = row;
             _rowById.set(row.stableId, {
@@ -306,6 +332,8 @@ export function createCapAlertsLayer({
     },
 
     destroy(viewer = _viewer) {
+      _removeCameraWatch?.();
+      _removeCameraWatch = null;
       _request?.abort();
       _request = null;
       removeClickHandler();

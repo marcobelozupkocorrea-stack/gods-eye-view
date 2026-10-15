@@ -443,8 +443,22 @@ const LAYERS = [
           Number(c.lon ?? c.lng ?? c.longitude),
         ),
       ).length;
+      const byProvider = {};
+      for (const c of cams)
+        if (
+          inBrazil(
+            Number(c.lat ?? c.latitude),
+            Number(c.lon ?? c.lng ?? c.longitude),
+          )
+        )
+          byProvider[c.provider || '?'] =
+            (byProvider[c.provider || '?'] || 0) + 1;
+      const detail = Object.entries(byProvider)
+        .sort((a, b) => b[1] - a[1])
+        .map(([p, n]) => `${p} ${n}`)
+        .join(', ');
       return res.status === 200 && cams.length
-        ? ['OK', `${cams.length} câmeras, ${br} no Brasil (DER-SP + CET-SP)`]
+        ? ['OK', `${cams.length} câmeras, ${br} no Brasil (${detail})`]
         : ['FALHA', `HTTP ${res.status}`];
     },
   ],

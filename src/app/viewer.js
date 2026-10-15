@@ -125,6 +125,9 @@ export function createApplicationViewer({ container, creditContainer }) {
     baseLayer: false,
     creditContainer,
     msaaSamples: viewerMsaaSamples(),
+    // barreto.top: the star sky box is six ~150 KB textures (0.85 MB) that the
+    // vignetted phone layout barely shows; phones skip it.
+    ...(isConstrainedDevice() ? { skyBox: false } : {}),
     // barreto.top: keeping the drawing buffer (only needed to snapshot the
     // canvas for voice) costs phone GPUs a full-screen copy every frame.
     contextOptions: {

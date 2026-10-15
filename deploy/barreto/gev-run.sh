@@ -89,6 +89,9 @@ build() {
   log "gerando build"
   (cd "$tmp" && timeout 900 npm run build </dev/null) ||
     { log "build falhou ou passou de 15 min"; return 1; }
+  # Smaller copies for browsers that accept Brotli; optional.
+  (cd "$tmp" && timeout 600 nice node scripts/barreto-precompress.mjs dist </dev/null) ||
+    log "pré-compressão falhou; segue sem ela"
   chown -R node:node "$tmp" || return 1
   rm -rf "${REL:?}/$WANT"
   mv "$tmp" "$REL/$WANT" || return 1

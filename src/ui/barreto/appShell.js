@@ -772,6 +772,8 @@ export function initAppShell({
     notice.hidden = true;
   };
 
+  // "Ver no mapa" / "Ver a cidade agora" in the alerts sheet: show the map.
+  on(document, 'barreto:near-go', () => close());
   on(globalThis, 'offline', () =>
     showNotice('Sem internet. O mapa mostra só o que já foi carregado.', {
       sticky: true,

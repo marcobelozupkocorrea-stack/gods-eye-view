@@ -1018,7 +1018,10 @@ const BUS_SOURCES = {
 };
 
 /** A real bus position from a city's open GPS feed. */
-export function busSheet(b = {}) {
+export function busSheet(
+  b = {},
+  { following = false, lineFilter = null } = {},
+) {
   const ageMin = finite(b.em)
     ? Math.max(0, Math.round((Date.now() - b.em) / 60_000))
     : null;
@@ -1044,7 +1047,24 @@ export function busSheet(b = {}) {
         ['Acessível', b.acessivel ? 'Sim' : null],
       ]),
     ],
+    actions: [
+      {
+        id: 'seguir',
+        icon: 'my_location',
+        label: following ? 'Parar de acompanhar' : 'Acompanhar este ônibus',
+        primary: !following,
+      },
+      b.linha
+        ? {
+            id: 'linha',
+            icon: 'filter_alt',
+            label: lineFilter
+              ? 'Mostrar todas as linhas'
+              : `Ver só a linha ${b.linha}`,
+          }
+        : null,
+    ],
     links: [mapsLink(b.lat, b.lon)],
-    note: `Posição real do GPS do veículo. Fonte: ${BUS_SOURCES[b.cidade] || 'prefeitura'}.`,
+    note: `Posição real do GPS do veículo. Fonte: ${BUS_SOURCES[b.cidade] || 'prefeitura'}.${following ? ' Acompanhando: o mapa segue o ônibus e a linha azul mostra por onde ele passou.' : ''}`,
   });
 }

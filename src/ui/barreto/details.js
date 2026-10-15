@@ -57,8 +57,16 @@ export function renderSheetHtml(s) {
         : '';
     })
     .join('');
+  const actions = (s.actions || [])
+    .filter((a) => a && a.id && a.label)
+    .map(
+      (a) =>
+        `<button type="button" class="barreto-details-action${a.primary ? ' primary' : ''}" data-action="${escapeHtml(a.id)}">${a.icon ? `<span class="material-symbols-outlined" aria-hidden="true">${escapeHtml(a.icon)}</span>` : ''}${escapeHtml(a.label)}</button>`,
+    )
+    .join('');
   return `
     ${s.alert ? `<p class="barreto-details-alert" role="alert">${escapeHtml(s.alert)}</p>` : ''}
+    ${actions ? `<div class="barreto-details-actions">${actions}</div>` : ''}
     ${s.loading ? '<p class="barreto-details-loading">Buscando mais informações…</p>' : ''}
     ${sections || '<p class="barreto-details-loading">Sem detalhes disponíveis.</p>'}
     ${links ? `<nav class="barreto-details-links" aria-label="Ver em outros sites">${links}</nav>` : ''}
@@ -285,6 +293,7 @@ export function initDetailsSheet({ dataManager, styleManager, signal } = {}) {
   // ---- Brazilian alert layers
   function openRecord({ layerId, id, record }) {
     if (!record) return;
+    if (layerId === 'city-buses') return openBus(String(id), record);
     const build =
       layerId === 'inmet-alerts'
         ? () => capAlertSheet(record, { source: 'inmet' })
@@ -303,6 +312,44 @@ export function initDetailsSheet({ dataManager, styleManager, signal } = {}) {
                     : null;
     if (build) open({ layerId, id: String(id), build });
   }
+
+  /** A bus: its card follows the live position and offers follow / line. */
+  function openBus(id, record) {
+    const layer = () => moduleOf('city-buses');
+    const params = () => layer()?.getParams?.() || {};
+    open({
+      layerId: 'city-buses',
+      id,
+      live: true,
+      build: () =>
+        busSheet(layer()?.getItem?.(id) || record, {
+          following: params().seguir === id,
+          lineFilter: params().linha,
+        }),
+      onAction: (action) => {
+        const bus = layer()?.getItem?.(id) || record;
+        if (action === 'seguir')
+          dataManager?.setLayerParams?.(
+            'city-buses',
+            { seguir: params().seguir === id ? null : id },
+            { origin: 'user' },
+          );
+        else if (action === 'linha' && bus.linha)
+          dataManager?.setLayerParams?.(
+            'city-buses',
+            { linha: params().linha ? null : bus.linha },
+            { origin: 'user' },
+          );
+        setTimeout(paint, 50);
+      },
+    });
+  }
+
+  body.addEventListener('click', (event) => {
+    const button = event.target.closest?.('[data-action]');
+    if (!button || !current?.onAction) return;
+    current.onAction(button.dataset.action);
+  });
 
   // Earthquakes have no click handler of their own: pick their discs here.
   let quakeHandler = null;

@@ -21,6 +21,8 @@ import {
 } from './alertsApi.js';
 import { loadFavorites, onFavorites } from './places.js';
 import { loadAreas, onAreas } from './areas.js';
+import { goCityNow } from './cityNow.js';
+import { renderNearExtras } from './nearExtras.js';
 
 const el = (tag, attrs = {}, children = []) => {
   const node = document.createElement(tag);
@@ -114,6 +116,7 @@ export function createNearCard({ styleManager, signal }) {
   let favorites = [];
   let choice = readNearChoice(); // '' | '@local' | favourite name
   let lastPoint = null;
+  let lastRadius = 0;
   let busy = false;
 
   const select = el('select', {
@@ -234,6 +237,7 @@ export function createNearCard({ styleManager, signal }) {
         }
       }
       lastPoint = point;
+      lastRadius = raio;
       const data = await fetchNear(point.lat, point.lon, { signal }, raio);
       render(data, label);
     } catch (err) {
@@ -284,11 +288,24 @@ export function createNearCard({ styleManager, signal }) {
       });
       card.append(go);
     }
+    const cityBtn = el('button', { type: 'button', className: 'al-city-now' }, [
+      icon('location_city'),
+      el('span', { text: 'Ver a cidade agora' }),
+      el('small', { text: 'trânsito · ocorrências · ônibus · radar' }),
+    ]);
+    cityBtn.addEventListener('click', () => {
+      card.dispatchEvent(new CustomEvent('barreto:near-go', { bubbles: true }));
+      void goCityNow(lastPoint);
+    });
     const weatherBox = el('div', { className: 'al-weather' }, [
       el('p', { className: 'al-muted', text: 'Carregando a previsão…' }),
     ]);
-    card.append(weatherBox);
-    if (lastPoint) void renderWeather(weatherBox, lastPoint);
+    const extras = el('div', { className: 'al-near-extras' });
+    card.append(cityBtn, weatherBox, extras);
+    if (lastPoint) {
+      void renderWeather(weatherBox, lastPoint);
+      renderNearExtras(extras, lastPoint, lastRadius, { signal });
+    }
   }
 
   let daysOpen = false;
@@ -320,6 +337,8 @@ export function createNearCard({ styleManager, signal }) {
                 a.ventoKmh != null ? `vento ${a.ventoKmh} km/h` : '',
               ]
                 .filter(Boolean)
+                // Each item stays on one line; only the dots may wrap.
+                .map((part) => part.replace(/ /g, '\u00a0'))
                 .join(' · '),
             }),
           ]),

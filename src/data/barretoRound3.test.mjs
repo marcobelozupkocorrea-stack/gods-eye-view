@@ -274,7 +274,7 @@ test('morning summary: forecast, alerts and incidents per area', async () => {
   const [mogi, trabalho] = out.body.split('\n');
   assert.match(
     mogi,
-    /^Mogi: 17–27°, pancadas de chuva, chuva 80% a partir das 15h · alerta: chuva forte \(alto\) · 2 ocorrências no trânsito \(1 acidente\/bloqueio\)$/,
+    /^Mogi: 17–27°, pancadas de chuva, chuva 80% a partir das 15h · alerta: chuva forte \(alto\) · 2 ocorrências no trânsito \(1 acidente\)$/,
   );
   assert.match(trabalho, /^Trabalho: 17–27°/);
   assert.ok(!/ocorrência/.test(trabalho), 'incidents only for areas');

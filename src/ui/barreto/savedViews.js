@@ -5,6 +5,9 @@
  * phone and the computer.
  */
 
+import { goCityNow } from './cityNow.js';
+import { openFormSheet } from './formSheet.js';
+
 const LOCAL_KEY = 'barreto:views:v1';
 const CAMERA_KEYS = new Set([
   'lat',
@@ -180,17 +183,33 @@ export function mountViewsList(container, { styleManager, onApplied } = {}) {
       )
       .join('');
     container.innerHTML = `
+      <button type="button" class="barreto-citynow-btn" data-role="citynow"><span class="material-symbols-outlined" aria-hidden="true">location_city</span><span><b>Minha cidade agora</b><small>Trânsito, ocorrências, ônibus, radar e alertas onde você está</small></span></button>
       <div class="barreto-views-list">${items || '<p class="al-muted">Nenhuma visão salva ainda. Arrume o mapa (lugar, camadas, estilo) e salve.</p>'}</div>
       <button type="button" class="al-btn barreto-views-save"><span class="material-symbols-outlined" aria-hidden="true">bookmark_add</span>Salvar esta visão</button>`;
   };
   container.addEventListener('click', async (e) => {
+    if (e.target.closest('[data-role="citynow"]')) {
+      onApplied?.({ name: 'Minha cidade agora' });
+      await goCityNow();
+      return;
+    }
     const save = e.target.closest('.barreto-views-save');
     if (save) {
-      const name = globalThis.prompt?.(
-        'Nome desta visão (ex.: Chuva no litoral, Rodovias SP):',
-        '',
-      );
-      if (name && name.trim()) await addView(styleManager, name);
+      const values = await openFormSheet({
+        title: 'Salvar esta visão',
+        intro: 'Guarda o lugar, as camadas ligadas e o estilo do mapa.',
+        fields: [
+          {
+            name: 'nome',
+            label: 'Nome',
+            placeholder: 'Chuva no litoral, Rodovias SP…',
+            maxLength: 40,
+            required: true,
+          },
+        ],
+        submitLabel: 'Salvar',
+      });
+      if (values?.nome) await addView(styleManager, values.nome);
       return;
     }
     const b = e.target.closest('[data-view]');

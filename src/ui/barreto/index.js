@@ -5,6 +5,8 @@
  */
 import { initAppShell } from './appShell.js';
 import { installAreasOverlay } from './areas.js';
+import { installBusesUi } from './busesUi.js';
+import { installCityNow } from './cityNow.js';
 import { initBrasilPanel } from './brasilPanel.js';
 import {
   installBrazilCities,
@@ -71,6 +73,8 @@ export function initBarretoExperience({ styleManager, dataManager } = {}) {
   initMapMenu({ styleManager, routePlanner, signal });
   installViewsButton({ styleManager, signal });
   installAreasOverlay({ styleManager, signal });
+  installCityNow({ styleManager, dataManager, signal });
+  installBusesUi({ dataManager, signal });
   installTimelineButton(timeline, { signal });
   registerServiceWorker();
   initWelcome({ styleManager, dataManager, brasilPanel, help, signal });

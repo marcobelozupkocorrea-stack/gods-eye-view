@@ -20,6 +20,19 @@
  */
 
 const CACHE_MS = 60_000;
+const TRACK_POINTS = 30;
+const TRACK_TTL_MS = 20 * 60_000;
+const LINE_CELLS_MAX = 4000;
+const LINE_TTL_MS = 6 * 60 * 60_000;
+/** ~45 m grid for the approximate route of a line. */
+const cellOf = (r) =>
+  `${Math.round(r.lon / 0.0004)},${Math.round(r.lat / 0.0004)}`;
+/** "474 " / "0.156" / "SP-8000-10" → comparable line code. */
+export const normLine = (v) =>
+  String(v ?? '')
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '');
 const MAX_AGE_MS = 10 * 60_000;
 const MAX_ITEMS = 6000;
 const MAX_SPAN_DEG = 2.5;
@@ -297,6 +310,39 @@ export function createBusSource({
     };
   }
 
+  // Short trail per vehicle (for "Acompanhar") and the cells each line has
+  // been seen in (its approximate route, built from real positions).
+  const tracks = new Map(); // vehicle id → [[lon, lat, t], …]
+  const lineCells = new Map(); // `${city}|${linha}` → Map(cell → [lon, lat, t])
+
+  function record(items) {
+    const t = now();
+    for (const r of items) {
+      const track = tracks.get(r.id) || [];
+      const last = track[track.length - 1];
+      if (!last || last[0] !== r.lon || last[1] !== r.lat) {
+        track.push([r.lon, r.lat, r.em || t]);
+        while (track.length > TRACK_POINTS) track.shift();
+        tracks.set(r.id, track);
+      }
+      if (!r.linha) continue;
+      const key = `${r.cidade}|${normLine(r.linha)}`;
+      let cells = lineCells.get(key);
+      if (!cells) lineCells.set(key, (cells = new Map()));
+      if (cells.size >= LINE_CELLS_MAX && !cells.has(cellOf(r))) continue;
+      cells.set(cellOf(r), [r.lon, r.lat, t]);
+    }
+    // Forget what went quiet.
+    for (const [id, track] of tracks)
+      if (t - (track[track.length - 1]?.[2] || 0) > TRACK_TTL_MS)
+        tracks.delete(id);
+    for (const [key, cells] of lineCells) {
+      for (const [cell, p] of cells)
+        if (t - p[2] > LINE_TTL_MS) cells.delete(cell);
+      if (!cells.size) lineCells.delete(key);
+    }
+  }
+
   async function loadCity(city) {
     const hit = cache.get(city.id);
     if (hit && now() - hit.at < CACHE_MS) return hit;
@@ -309,6 +355,7 @@ export function createBusSource({
         );
         const entry = { at: now(), items, error: null };
         cache.set(city.id, entry);
+        record(items);
         return entry;
       } catch (err) {
         console.warn(`[onibus] ${city.id}:`, err?.message || err);
@@ -327,8 +374,9 @@ export function createBusSource({
     return work;
   }
 
-  async function inBox(bbox) {
+  async function inBox(bbox, { linha = '', seguir = '' } = {}) {
     const [w, s, e, n] = bbox;
+    const line = normLine(linha);
     const cities = BUS_CITIES.map((c) => ({
       id: c.id,
       nome: c.nome,
@@ -349,12 +397,46 @@ export function createBusSource({
     );
     const loaded = await Promise.all(visible.map(loadCity));
     const items = [];
+    let followed = null;
     for (const entry of loaded)
-      for (const r of entry.items)
-        if (r.lon >= w && r.lon <= e && r.lat >= s && r.lat <= n) items.push(r);
+      for (const r of entry.items) {
+        if (seguir && r.id === seguir) followed = r;
+        // A line filter shows the whole line in the cities on screen.
+        if (line) {
+          if (normLine(r.linha) === line) items.push(r);
+        } else if (r.lon >= w && r.lon <= e && r.lat >= s && r.lat <= n)
+          items.push(r);
+      }
+    if (followed && !items.includes(followed)) items.push(followed);
+    // The most common lines on screen, as suggestions for the line filter.
+    const counts = new Map();
+    if (!line)
+      for (const r of items)
+        if (r.linha) counts.set(r.linha, (counts.get(r.linha) || 0) + 1);
+    const linhasNaTela = [...counts]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([l]) => l);
+    let trajeto;
+    if (line) {
+      trajeto = [];
+      for (const c of visible)
+        for (const p of lineCells.get(`${c.id}|${line}`)?.values() || [])
+          if (trajeto.length < LINE_CELLS_MAX) trajeto.push([p[0], p[1]]);
+    }
     return {
       items: items.slice(0, MAX_ITEMS),
       cortado: items.length > MAX_ITEMS || undefined,
+      ...(line ? { linha: line, trajeto } : { linhasNaTela }),
+      ...(followed
+        ? {
+            rastro: (tracks.get(followed.id) || []).map(([x, y, t]) => [
+              x,
+              y,
+              t,
+            ]),
+          }
+        : {}),
       cidades: cities.map((c) => ({
         ...c,
         ...cityStatus(BUS_CITIES.find((x) => x.id === c.id)),
@@ -362,7 +444,11 @@ export function createBusSource({
     };
   }
 
-  return { inBox, cityStatus };
+  return {
+    inBox,
+    cityStatus,
+    trackOf: (id) => tracks.get(id)?.slice() || [],
+  };
 }
 
 let shared = null;
@@ -390,7 +476,10 @@ export function busesProxy({ source = null } = {}) {
         return send(400, { error: 'bbox' });
       const [w, s, e, n] = parts;
       if (w >= e || s >= n) return send(400, { error: 'bbox' });
-      const result = await (source || busSource()).inBox(parts);
+      const result = await (source || busSource()).inBox(parts, {
+        linha: String(url.searchParams.get('linha') || '').slice(0, 20),
+        seguir: String(url.searchParams.get('seguir') || '').slice(0, 60),
+      });
       return send(200, { fetchedAt: Date.now(), ...result });
     } catch (err) {
       console.warn('[onibus]', err?.message || err);

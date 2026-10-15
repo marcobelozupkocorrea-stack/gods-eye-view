@@ -64,11 +64,16 @@ export function summaryLine(
       `alerta: ${serious.map((r) => `${r.label.toLowerCase()} (${LEVELS[r.rank].toLowerCase()})`).join(', ')}`,
     );
   if (incidents && incidents.total > 0) {
-    const big = incidents.items.filter((i) =>
-      ['acidente', 'bloqueio'].includes(i.kind),
-    ).length;
+    const crashes = incidents.items.filter((i) => i.kind === 'acidente').length;
+    const closed = incidents.items.filter((i) => i.kind === 'bloqueio').length;
+    const detail = [
+      crashes ? `${crashes} acidente${crashes > 1 ? 's' : ''}` : '',
+      closed ? `${closed} interdiç${closed > 1 ? 'ões' : 'ão'}` : '',
+    ]
+      .filter(Boolean)
+      .join(', ');
     parts.push(
-      `${incidents.total} ocorrência${incidents.total > 1 ? 's' : ''} no trânsito${big ? ` (${big} acidente/bloqueio)` : ''}`,
+      `${incidents.total} ocorrência${incidents.total > 1 ? 's' : ''} no trânsito${detail ? ` (${detail})` : ''}`,
     );
   }
   return parts.length ? `${place.name}: ${parts.join(' · ')}` : null;

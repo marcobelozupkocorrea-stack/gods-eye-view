@@ -494,9 +494,20 @@ export function createPush({
     return total;
   }
 
+  /** What the summary needs about one person (no subscription required). */
+  async function summarySubject(hash) {
+    const user = await readUser(hash);
+    return {
+      prefs: user.prefs,
+      favorites: await favoritesOf(hash),
+      areas: user.areas,
+    };
+  }
+
   return {
     vapid,
     getState,
+    summarySubject,
     subscribe,
     unsubscribe,
     setPrefs,

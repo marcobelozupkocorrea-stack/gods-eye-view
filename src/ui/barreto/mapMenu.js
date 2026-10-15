@@ -13,6 +13,7 @@ import {
 } from './alertsApi.js';
 import { addFavorite, escapeHtml, reversePlace } from './places.js';
 import { promptNewArea } from './areas.js';
+import { openFormSheet } from './formSheet.js';
 
 const HOLD_MS = 550;
 const MOVE_PX = 10;
@@ -122,11 +123,21 @@ export function initMapMenu({ styleManager, routePlanner, signal } = {}) {
     };
     if (act === 'route') routePlanner?.setDestination(place);
     else if (act === 'save') {
-      const name = globalThis.prompt?.(
-        'Nome para este lugar (ex.: Casa, Trabalho):',
-        spot.name || '',
-      );
-      if (name && name.trim()) await addFavorite(place, name.trim());
+      const values = await openFormSheet({
+        title: 'Salvar lugar',
+        fields: [
+          {
+            name: 'nome',
+            label: 'Nome',
+            value: spot.name || '',
+            placeholder: 'Casa, Trabalho, Escola…',
+            maxLength: 40,
+            required: true,
+          },
+        ],
+        submitLabel: 'Salvar',
+      });
+      if (values?.nome) await addFavorite(place, values.nome);
     } else if (act === 'area') {
       await promptNewArea(place).catch(() => {});
     } else if (act === 'copy') {

@@ -21,7 +21,7 @@ import webpush from 'web-push';
 import { barretoDataDir } from '../barretoPlaces.js';
 import { createHistory } from './history.js';
 import { createPush, userHash } from './push.js';
-import { composeSummary } from './summary.js';
+import { composeSummary, summaryPlaces } from './summary.js';
 import { weatherNow } from '../weatherNow.js';
 import { incidentSource } from '../trafficIncidents.js';
 import {
@@ -271,6 +271,23 @@ export function barretoAlertsHub({
     const method = req.method || 'GET';
     if (route === '/' && method === 'GET')
       return send(res, 200, await push.getState(hash));
+    // The same summary as the morning notification, to read in the app.
+    if (route === '/resumo' && method === 'GET') {
+      const who = await push.summarySubject(hash);
+      // Nothing to summarise: answer at once (no wait for the alerts).
+      const summary = summaryPlaces(who).length ? await summaryFor(who) : null;
+      return send(res, 200, {
+        resumo: summary
+          ? {
+              titulo: summary.title,
+              linhas: String(summary.body || '')
+                .split('\n')
+                .filter(Boolean),
+              nivel: summary.rank || 0,
+            }
+          : null,
+      });
+    }
     if (method !== 'POST' && method !== 'PUT')
       return send(res, 405, { error: 'metodo' });
     let body;
