@@ -686,6 +686,94 @@ const LAYERS = [
     },
   ],
   [
+    'Ocorrências de trânsito',
+    async () => {
+      const body = json(
+        await get('/api/br/ocorrencias?bbox=-46.75,-23.65,-46.55,-23.5'),
+      );
+      if (!body) return ['FALHA', 'resposta inválida'];
+      if (body.semChave) return ['SEM CHAVE', 'TOMTOM_API_KEY'];
+      if (body.budgetOut)
+        return ['LIMITADO', 'limite diário do TomTom atingido'];
+      const kinds = {};
+      for (const i of body.items || [])
+        kinds[i.label] = (kinds[i.label] || 0) + 1;
+      return [
+        body.failedCells ? 'LIMITADO' : 'OK',
+        `centro de São Paulo: ${body.items?.length || 0} ocorrências (${Object.entries(
+          kinds,
+        )
+          .slice(0, 4)
+          .map(([k, v]) => `${v} ${k.toLowerCase()}`)
+          .join(
+            ', ',
+          )})${body.failedCells ? `, ${body.failedCells} células falharam` : ''}`,
+      ];
+    },
+  ],
+  [
+    'Ônibus em tempo real',
+    async () => {
+      const boxes = {
+        Rio: '-43.3,-22.95,-43.1,-22.85',
+        DF: '-48.0,-15.9,-47.8,-15.7',
+        BH: '-44.0,-20.0,-43.9,-19.85',
+        SP: '-46.7,-23.6,-46.6,-23.5',
+      };
+      const parts = [];
+      let cities = [];
+      for (const [name, box] of Object.entries(boxes)) {
+        const body = json(await get(`/api/br/onibus?bbox=${box}`));
+        cities = body?.cidades || cities;
+        parts.push(`${name} ${body?.items?.length ?? 'erro'}`);
+      }
+      const status = Object.fromEntries(cities.map((c) => [c.id, c]));
+      const failed = cities.filter((c) => c.status === 'falhou');
+      const ok = cities.filter((c) => c.status === 'ok').length;
+      return [
+        !ok ? 'FALHA' : failed.length ? 'LIMITADO' : 'OK',
+        `ônibus na área de teste: ${parts.join(', ')}; frota inteira: ${cities
+          .map(
+            (c) =>
+              `${c.nome} ${c.status === 'ok' ? c.total : { sem_chave: 'sem chave', falhou: 'sem resposta', parado: 'não consultado' }[c.status] || c.status}`,
+          )
+          .join(
+            ', ',
+          )}${status.sp?.status === 'sem_chave' ? ' (SP precisa de SPTRANS_TOKEN)' : ''}`,
+      ];
+    },
+  ],
+  [
+    'Qualidade do ar',
+    async () => {
+      const list = json(await get('/api/br/ar'))?.cidades || [];
+      const sp = list.find((c) => c.nome === 'São Paulo');
+      const worst = [...list].sort((a, b) => (b.aqi || 0) - (a.aqi || 0))[0];
+      return list.length
+        ? [
+            'OK',
+            `${list.length} cidades (CAMS); São Paulo ${sp?.aqi ?? '–'} (${sp?.nivel || '–'}); pior: ${worst?.nome} ${worst?.aqi}`,
+          ]
+        : ['FALHA', 'nenhuma cidade'];
+    },
+  ],
+  [
+    'Previsão do tempo',
+    async () => {
+      const body = json(await get('/api/br/tempo?lat=-23.55&lon=-46.63'));
+      const today = body?.dias?.[0];
+      return body?.agora && today
+        ? [
+            'OK',
+            `São Paulo agora ${body.agora.temp}° (${body.agora.desc}); hoje ${today.min}–${today.max}°, chuva ${today.chuvaProb ?? '–'}%`,
+          ]
+        : [
+            'FALHA',
+            `resposta inválida (${JSON.stringify(body)?.slice(0, 120)})`,
+          ];
+    },
+  ],
+  [
     'Rádio',
     async () => {
       const res = await get('/api/radio/stations');
