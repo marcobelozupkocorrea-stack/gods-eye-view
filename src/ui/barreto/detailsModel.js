@@ -904,3 +904,147 @@ export function earthquakeSheet(q = {}) {
     note: 'Fonte: USGS (Serviço Geológico dos EUA), últimas 24 h, magnitude 2,5 ou mais.',
   });
 }
+
+const INCIDENT_SHEET_ICON = Object.freeze({
+  acidente: 'car_crash',
+  bloqueio: 'block',
+  obra: 'construction',
+  faixa: 'construction',
+  congestionamento: 'traffic',
+  alagamento: 'flood',
+  chuva: 'rainy',
+  neblina: 'foggy',
+  gelo: 'ac_unit',
+  vento: 'air',
+  quebrado: 'car_repair',
+  perigo: 'warning',
+  outro: 'info',
+});
+const INCIDENT_SHEET_COLOR = Object.freeze({
+  acidente: '#ff3b30',
+  bloqueio: '#b3261e',
+  obra: '#ff9f0a',
+  faixa: '#ff9f0a',
+  congestionamento: '#ff6b00',
+  alagamento: '#0a84ff',
+});
+
+/** TomTom traffic incident (src/layers/trafficIncidents). */
+export function incidentSheet(i = {}) {
+  const where = [i.from, i.to].filter(Boolean).join(' → ');
+  const delay =
+    finite(i.delayS) && i.delayS >= 60
+      ? `+${Math.round(i.delayS / 60)} min`
+      : null;
+  return sheet({
+    icon: INCIDENT_SHEET_ICON[i.kind] || 'warning',
+    kicker: 'OCORRÊNCIA DE TRÂNSITO',
+    title: i.label || 'Ocorrência',
+    subtitle: [i.roads?.join(' / '), where].filter(Boolean).join(' · ') || null,
+    accent: INCIDENT_SHEET_COLOR[i.kind] || '#ffd60a',
+    sections: [
+      section('Ocorrência', [
+        [
+          'O que é',
+          i.description && i.description !== i.label ? i.description : null,
+        ],
+        ['Trecho', where || null],
+        ['Rodovia / via', i.roads?.length ? i.roads.join(', ') : null],
+        [
+          'Impacto',
+          i.delayLabel ? `${i.delayLabel}${delay ? ` (${delay})` : ''}` : delay,
+        ],
+        [
+          'Extensão',
+          finite(i.lengthM)
+            ? i.lengthM >= 1000
+              ? `${fmtNum(i.lengthM / 1000, 1)} km`
+              : `${Math.round(i.lengthM)} m`
+            : null,
+        ],
+        ['Desde', i.start ? `${fmtWhen(i.start)} (${fmtAge(i.start)})` : null],
+        ['Previsão de fim', i.end ? fmtWhen(i.end) : null],
+        ['Coordenadas', fmtCoords(i.lat, i.lon)],
+      ]),
+    ],
+    links: [mapsLink(i.lat, i.lon)],
+    note: 'Fonte: TomTom (dados de trânsito ao vivo).',
+  });
+}
+
+/** Air quality for a city (src/layers/airQuality). */
+export function airSheet(c = {}) {
+  return sheet({
+    icon: 'air',
+    kicker: 'QUALIDADE DO AR',
+    title: `${c.nome || 'Cidade'}${c.uf ? `/${c.uf}` : ''}`,
+    subtitle: finite(c.aqi) ? `Índice ${c.aqi} · ${c.nivel || ''}` : null,
+    accent: c.cor || '#8e8e93',
+    sections: [
+      section('Agora', [
+        ['Índice (AQI, escala EUA)', finite(c.aqi) ? String(c.aqi) : null],
+        ['Situação', c.nivel || null],
+        [
+          'Partículas finas (PM2,5)',
+          finite(c.pm25) ? `${fmtNum(c.pm25, 1)} µg/m³` : null,
+        ],
+        [
+          'Partículas (PM10)',
+          finite(c.pm10) ? `${fmtNum(c.pm10, 1)} µg/m³` : null,
+        ],
+        ['Ozônio (O₃)', finite(c.o3) ? `${fmtNum(c.o3)} µg/m³` : null],
+        [
+          'Dióxido de nitrogênio (NO₂)',
+          finite(c.no2) ? `${fmtNum(c.no2, 1)} µg/m³` : null,
+        ],
+      ]),
+    ],
+    links: [mapsLink(c.lat, c.lon)],
+    note: 'Estimativa do modelo Copernicus CAMS (grade de ~10–40 km), via Open-Meteo. Não é medição de estação. Até 50 = boa · 51–100 moderada · 101–150 ruim para sensíveis · acima de 150 ruim.',
+  });
+}
+
+const BUS_CITY_NAMES = {
+  rio: 'Rio de Janeiro',
+  df: 'Distrito Federal',
+  bh: 'Belo Horizonte',
+  sp: 'São Paulo',
+};
+const BUS_SOURCES = {
+  rio: 'SMTR Rio — GPS dos ônibus e BRT',
+  df: 'Semob-DF (dados do "DF no Ponto")',
+  bh: 'PBH/BHTRANS — tempo real (CC-BY)',
+  sp: 'SPTrans Olho Vivo',
+};
+
+/** A real bus position from a city's open GPS feed. */
+export function busSheet(b = {}) {
+  const ageMin = finite(b.em)
+    ? Math.max(0, Math.round((Date.now() - b.em) / 60_000))
+    : null;
+  return sheet({
+    icon: b.modo === 'BRT' ? 'tram' : 'directions_bus',
+    kicker: `${(b.modo || 'Ônibus').toUpperCase()} · ${BUS_CITY_NAMES[b.cidade] || ''}`,
+    title: b.linha ? `Linha ${b.linha}` : 'Linha não informada',
+    subtitle: b.destino || (b.sentido ? `Sentido ${b.sentido}` : null),
+    accent: '#ffb020',
+    sections: [
+      section('Agora', [
+        ['Veículo', b.id ? String(b.id).split(':').slice(1).join(':') : null],
+        ['Velocidade', finite(b.vel) ? `${Math.round(b.vel)} km/h` : null],
+        [
+          'Posição enviada',
+          ageMin == null
+            ? null
+            : ageMin < 1
+              ? 'agora há pouco'
+              : `há ${ageMin} min`,
+        ],
+        ['Operadora', b.operadora || null],
+        ['Acessível', b.acessivel ? 'Sim' : null],
+      ]),
+    ],
+    links: [mapsLink(b.lat, b.lon)],
+    note: `Posição real do GPS do veículo. Fonte: ${BUS_SOURCES[b.cidade] || 'prefeitura'}.`,
+  });
+}

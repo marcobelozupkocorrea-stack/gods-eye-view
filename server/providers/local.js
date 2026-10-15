@@ -27,6 +27,9 @@ import { weatherProxy } from './weather.js';
 import { brazilRadarProxy } from './brazilRadar.js';
 import { barretoPlacesProxy } from './barretoPlaces.js';
 import { barretoAlertsHub } from './alertas/index.js';
+import { trafficIncidentsProxy } from './trafficIncidents.js';
+import { weatherNowProxy } from './weatherNow.js';
+import { busesProxy } from './buses.js';
 import { firePerimetersProxy } from './firePerimeters.js';
 import { inmetAlertsProxy } from './inmetAlerts.js';
 import { defesaCivilAlertsProxy } from './defesaCivilAlerts.js';
@@ -77,6 +80,9 @@ function localProviderPlugins({ realtime } = {}) {
     deterAlertsProxy(),
     cemadenAlertsProxy(),
     barretoAlertsHub(),
+    trafficIncidentsProxy(),
+    weatherNowProxy(),
+    busesProxy(),
     assetCacheHeaders(),
     keySetupEndpoint(),
   ];

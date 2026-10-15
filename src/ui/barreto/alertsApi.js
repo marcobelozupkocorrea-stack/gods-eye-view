@@ -30,11 +30,13 @@ const qs = (params) => {
 export const fetchStates = (opts) => getJson('/api/br/alertas/estados', opts);
 export const fetchCities = (uf, opts) =>
   getJson(`/api/br/alertas/cidades${qs({ uf })}`, opts);
-export const fetchNear = (lat, lon, opts) =>
+export const fetchNear = (lat, lon, opts, raio = 0) =>
   getJson(
-    `/api/br/alertas/perto${qs({ lat: lat.toFixed(3), lon: lon.toFixed(3) })}`,
+    `/api/br/alertas/perto${qs({ lat: lat.toFixed(3), lon: lon.toFixed(3), raio: raio || '' })}`,
     opts,
   );
+export const pushSummaryNow = () =>
+  getJson('/api/br/push/resumo', { method: 'POST', body: {} });
 export const fetchHistory = (params, opts) =>
   getJson(`/api/br/alertas/historico${qs(params)}`, opts);
 export const searchMunicipios = (q, opts) =>
@@ -125,3 +127,19 @@ export function sourcesText(list) {
   if (l.length <= 1) return l.join('');
   return `${l.slice(0, -1).join(', ')} e ${l[l.length - 1]}`;
 }
+
+export const fetchWeather = (lat, lon, opts) =>
+  getJson(
+    `/api/br/tempo${qs({ lat: lat.toFixed(2), lon: lon.toFixed(2) })}`,
+    opts,
+  );
+
+const WEEKDAY = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: 'UTC',
+  weekday: 'short',
+  day: '2-digit',
+  month: '2-digit',
+});
+/** "2026-10-15" → "qui., 15/10". */
+export const dayText = (iso) =>
+  WEEKDAY.format(new Date(`${iso}T12:00:00Z`)).replace('.', '');

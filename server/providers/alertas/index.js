@@ -21,6 +21,9 @@ import webpush from 'web-push';
 import { barretoDataDir } from '../barretoPlaces.js';
 import { createHistory } from './history.js';
 import { createPush, userHash } from './push.js';
+import { composeSummary } from './summary.js';
+import { weatherNow } from '../weatherNow.js';
+import { incidentSource } from '../trafficIncidents.js';
 import {
   alertsNear,
   citiesOfState,
@@ -70,6 +73,7 @@ export function barretoAlertsHub({
   let inflight = null;
   let primed = false;
   let timer = null;
+  let summaryTimer = null;
 
   async function collect() {
     if (!base) throw new Error('server not listening yet');
@@ -234,7 +238,19 @@ export function barretoAlertsHub({
       return send(
         res,
         200,
-        { ...meta, ...alertsNear(snap.alerts, lat, lon, idx) },
+        {
+          ...meta,
+          ...alertsNear(
+            snap.alerts,
+            lat,
+            lon,
+            idx,
+            Math.max(
+              0,
+              Math.min(100, Number(url.searchParams.get('raio')) || 0),
+            ),
+          ),
+        },
         'private, max-age=60',
       );
     }
@@ -295,7 +311,34 @@ export function barretoAlertsHub({
     }
     if (route === '/teste')
       return send(res, 200, { enviados: await push.test(hash) });
+    if (route === '/resumo')
+      return send(res, 200, {
+        enviados: await push.sendSummaries(summaryFor, { force: hash }),
+      });
     return send(res, 404, { error: 'rota' });
+  }
+
+  /** The morning summary for one person, from the current snapshot. */
+  const summaryFor = async (who) =>
+    composeSummary(who, {
+      alerts: (await current())?.alerts || [],
+      index: municipios(),
+      weather: weatherNow(),
+      incidents: incidentSource(),
+    });
+
+  async function areasHandler(req, res) {
+    const hash = userHash(req.headers?.['x-auth-request-email'] || 'local');
+    if (req.method === 'PUT' || req.method === 'POST') {
+      let body;
+      try {
+        body = await readJson(req);
+      } catch {
+        return send(res, 400, { error: 'json' });
+      }
+      return send(res, 200, { areas: await push.setAreas(hash, body?.areas) });
+    }
+    return send(res, 200, { areas: await push.getAreas(hash) });
   }
 
   const wrap = (handler) => async (req, res) => {
@@ -310,6 +353,7 @@ export function barretoAlertsHub({
   const install = (server) => {
     server.middlewares.use('/api/br/alertas', wrap(alertasHandler));
     server.middlewares.use('/api/br/push', wrap(pushHandler));
+    server.middlewares.use('/api/br/areas', wrap(areasHandler));
     const httpServer = server.httpServer;
     const start = () => {
       const address = httpServer?.address?.();
@@ -326,10 +370,22 @@ export function barretoAlertsHub({
       };
       timer = setTimeout(loop, FIRST_POLL_MS);
       timer.unref?.();
+      // Morning summaries: look once a minute for people due at this hour.
+      clearInterval(summaryTimer);
+      summaryTimer = setInterval(() => {
+        push.sendSummaries(summaryFor).then(
+          (n) => n && console.info(`[alertas] ${n} resumos da manhã enviados`),
+          (err) => console.warn('[alertas] resumo:', err?.message || err),
+        );
+      }, 60_000);
+      summaryTimer.unref?.();
     };
     if (httpServer?.listening) start();
     else httpServer?.once?.('listening', start);
-    httpServer?.once?.('close', () => clearTimeout(timer));
+    httpServer?.once?.('close', () => {
+      clearTimeout(timer);
+      clearInterval(summaryTimer);
+    });
   };
 
   return {

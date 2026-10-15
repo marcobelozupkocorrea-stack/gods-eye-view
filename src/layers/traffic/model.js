@@ -1,3 +1,4 @@
+import { viewDrawsDots } from './honesty.js';
 import * as Cesium from 'cesium';
 import { roadSurfaceChunks } from './surface.js';
 import {
@@ -102,12 +103,20 @@ export function createModel({ state: layerState, services, parts, source }) {
    * @returns {number} Ideal dot count (minimum 1).
    */
 
-  function computeDotCount(road, altitude) {
+  function computeDotCount(road, altitude, { admission = false } = {}) {
     // Live flow: closed roads carry zero traffic; congestion packs more dots.
     // `road.flow` is only ever set in live mode, so the keyless path is
     // untouched (flow stays undefined → multiplier 1, identical output).
     const flow = layerState._liveMode ? road.flow : null;
     if (flow?.closure) return 0;
+    // barreto.top honest view: roads only, no illustrative dots.
+    // Admission (which roads to draw) still needs the ideal count.
+    if (
+      !admission &&
+      layerState.roadView &&
+      !viewDrawsDots(layerState.roadView())
+    )
+      return 0;
     // Strict data-integrity view: uncovered roads spawn nothing when hidden.
     if (layerState._liveMode && !flow && layerState._uncoveredMode === 'hide')
       return 0;
@@ -156,8 +165,10 @@ export function createModel({ state: layerState, services, parts, source }) {
    * @returns {number[]} Per-road dot budgets, same length as `roads`.
    */
 
-  function allocateRoadDotBudgets(roads, altitude, dotCap) {
-    const planned = roads.map((road) => computeDotCount(road, altitude));
+  function allocateRoadDotBudgets(roads, altitude, dotCap, options = {}) {
+    const planned = roads.map((road) =>
+      computeDotCount(road, altitude, options),
+    );
     const budgets = new Array(roads.length).fill(0);
     let remaining = Math.max(0, dotCap);
 
@@ -307,7 +318,19 @@ export function createModel({ state: layerState, services, parts, source }) {
    */
 
   function recolorDotsInPlace(label) {
-    if (!layerState._liveMode || !layerState._dots.length) return;
+    if (!layerState._liveMode) return;
+    if (!layerState._dots.length) {
+      // Roads-only view: no dots to recolor, but the coloured roads must
+      // follow the flow that just arrived.
+      if (layerState.roadView && !viewDrawsDots(layerState.roadView()))
+        parts.rendering.rebuildHeatLines(
+          parts.rendering.visibleRoadsForAltitude(
+            layerState._roads,
+            layerState._lastRenderAltitude,
+          ),
+        );
+      return;
+    }
     layerState._bucketCounts = { free: 0, slow: 0, jam: 0, sim: 0 };
     let closedDots = 0;
     const now = Date.now();

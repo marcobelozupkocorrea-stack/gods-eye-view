@@ -1,4 +1,5 @@
 [
+  ["air-quality", "zh"],
   ["ais-live-vessels", "a"],
   ["alpr-cameras", "p"],
   ["bhote-koshi-2026", "h"],
@@ -7,6 +8,7 @@
   ["brazil-radar", "zf"],
   ["cctv", "c"],
   ["cemaden-alerts", "ze"],
+  ["city-buses", "zi"],
   ["defesa-civil-alerts", "zc"],
   ["deter-alerts", "zd"],
   ["directions", "n"],
@@ -27,6 +29,7 @@
   ["street-level", "0"],
   ["telegeography-submarine-cables", "u"],
   ["traffic", "t"],
+  ["traffic-incidents", "zg"],
   ["transit", "j"],
   ["weather-cyclones", "y"],
   ["weather-lightning", "l"],

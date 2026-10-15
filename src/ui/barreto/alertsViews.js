@@ -9,7 +9,9 @@ import {
   KIND_OPTIONS,
   LEVEL_COLOR,
   dateTimeText,
+  dayText,
   fetchCities,
+  fetchWeather,
   fetchHistory,
   fetchNear,
   fetchStates,
@@ -18,6 +20,7 @@ import {
   untilText,
 } from './alertsApi.js';
 import { loadFavorites, onFavorites } from './places.js';
+import { loadAreas, onAreas } from './areas.js';
 
 const el = (tag, attrs = {}, children = []) => {
   const node = document.createElement(tag);
@@ -123,9 +126,16 @@ export function createNearCard({ styleManager, signal }) {
     void refresh();
   });
 
+  let areaList = [];
   function options() {
     select.replaceChildren(
       el('option', { value: '@local', text: 'Minha localização' }),
+      ...areaList.map((a) =>
+        el('option', {
+          value: `@area:${a.nome}`,
+          text: `Área: ${a.nome} (${a.raioKm} km)`,
+        }),
+      ),
       ...favorites.map((f) => el('option', { value: f.name, text: f.name })),
     );
     select.value = choice || '@local';
@@ -181,7 +191,15 @@ export function createNearCard({ styleManager, signal }) {
     try {
       let point = null;
       let label = '';
-      if (choice && choice !== '@local') {
+      let raio = 0;
+      if (choice?.startsWith('@area:')) {
+        const a = areaList.find((x) => `@area:${x.nome}` === choice);
+        if (a) {
+          point = { lat: a.lat, lon: a.lon };
+          label = `${a.nome} · ${a.raioKm} km`;
+          raio = a.raioKm;
+        }
+      } else if (choice && choice !== '@local') {
         const f = favorites.find((x) => x.name === choice);
         if (f) {
           point = { lat: f.lat, lon: f.lon };
@@ -216,7 +234,7 @@ export function createNearCard({ styleManager, signal }) {
         }
       }
       lastPoint = point;
-      const data = await fetchNear(point.lat, point.lon, { signal });
+      const data = await fetchNear(point.lat, point.lon, { signal }, raio);
       render(data, label);
     } catch (err) {
       if (signal?.aborted) return;
@@ -266,6 +284,120 @@ export function createNearCard({ styleManager, signal }) {
       });
       card.append(go);
     }
+    const weatherBox = el('div', { className: 'al-weather' }, [
+      el('p', { className: 'al-muted', text: 'Carregando a previsão…' }),
+    ]);
+    card.append(weatherBox);
+    if (lastPoint) void renderWeather(weatherBox, lastPoint);
+  }
+
+  let daysOpen = false;
+  async function renderWeather(box, point) {
+    let w;
+    try {
+      w = await fetchWeather(point.lat, point.lon, { signal });
+    } catch {
+      box.replaceChildren(
+        el('p', {
+          className: 'al-muted',
+          text: 'Previsão indisponível agora.',
+        }),
+      );
+      return;
+    }
+    const a = w.agora;
+    const nextRain = (w.horas || []).find((h) => (h.chuvaProb ?? 0) >= 60);
+    const now = a
+      ? el('div', { className: 'al-wx-now' }, [
+          icon(a.icone || 'cloud', 'al-wx-icon'),
+          el('b', { className: 'al-wx-temp', text: `${a.temp ?? '–'}°` }),
+          el('span', { className: 'al-wx-desc' }, [
+            el('span', { text: a.desc }),
+            el('small', {
+              text: [
+                a.sensacao != null ? `sensação ${a.sensacao}°` : '',
+                a.umidade != null ? `umidade ${a.umidade}%` : '',
+                a.ventoKmh != null ? `vento ${a.ventoKmh} km/h` : '',
+              ]
+                .filter(Boolean)
+                .join(' · '),
+            }),
+          ]),
+        ])
+      : null;
+    const rainLine = el('p', {
+      className: 'al-wx-rain',
+      text: nextRain
+        ? `Chuva provável a partir das ${nextRain.hora} (${nextRain.chuvaProb}%).`
+        : 'Sem chuva provável nas próximas 24 h.',
+    });
+    const hours = el(
+      'div',
+      {
+        className: 'al-wx-hours',
+        role: 'list',
+        'aria-label': 'Próximas horas',
+      },
+      (w.horas || []).slice(0, 12).map((h) =>
+        el('span', { className: 'al-wx-hour', role: 'listitem' }, [
+          el('small', { text: h.hora }),
+          icon(h.icone, 'al-wx-hicon'),
+          el('b', { text: `${h.temp ?? '–'}°` }),
+          el('small', {
+            className: (h.chuvaProb ?? 0) >= 60 ? 'wet' : '',
+            text: `${h.chuvaProb ?? 0}%`,
+          }),
+        ]),
+      ),
+    );
+    const days = el(
+      'div',
+      { className: 'al-wx-days', hidden: !daysOpen },
+      (w.dias || []).slice(0, 7).map((d) =>
+        el('div', { className: 'al-wx-day' }, [
+          el('span', { className: 'al-wx-dname', text: dayText(d.dia) }),
+          icon(d.icone, 'al-wx-hicon'),
+          el('span', { text: d.desc }),
+          el('b', { text: `${d.min ?? '–'}° / ${d.max ?? '–'}°` }),
+          el('small', {
+            className: (d.chuvaProb ?? 0) >= 60 ? 'wet' : '',
+            text: `${d.chuvaProb ?? 0}%${d.chuvaMm ? ` · ${d.chuvaMm} mm` : ''}`,
+          }),
+        ]),
+      ),
+    );
+    const toggle = el('button', { type: 'button', className: 'al-link' }, [
+      el('span', { text: daysOpen ? 'Esconder 7 dias' : 'Próximos 7 dias' }),
+      icon(daysOpen ? 'expand_less' : 'expand_more'),
+    ]);
+    toggle.addEventListener('click', () => {
+      daysOpen = !daysOpen;
+      days.hidden = !daysOpen;
+      toggle.firstChild.textContent = daysOpen
+        ? 'Esconder 7 dias'
+        : 'Próximos 7 dias';
+      toggle.lastChild.textContent = daysOpen ? 'expand_less' : 'expand_more';
+    });
+    const air =
+      w.ar?.aqi != null
+        ? el('p', { className: 'al-wx-air' }, [
+            el('span', {
+              className: 'al-level',
+              style: `--lvl:${w.ar.cor}`,
+              text: `Ar: ${w.ar.nivel}`,
+            }),
+            el('small', {
+              text: ` índice ${w.ar.aqi}${w.ar.pm25 != null ? ` · PM2,5 ${w.ar.pm25} µg/m³` : ''} (estimativa CAMS)`,
+            }),
+          ])
+        : null;
+    box.replaceChildren(
+      ...[now, rainLine, hours, toggle, days, air].filter(Boolean),
+      el('p', {
+        className: 'al-muted al-small',
+        text: 'Previsão: Open-Meteo · Ar: Copernicus CAMS',
+      }),
+    );
   }
 
   const off = onFavorites((list) => {
@@ -273,7 +405,15 @@ export function createNearCard({ styleManager, signal }) {
     options();
   });
   void loadFavorites().catch(() => {});
-  signal?.addEventListener('abort', off);
+  const offAreas = onAreas((list) => {
+    areaList = list || [];
+    options();
+  });
+  void loadAreas().catch(() => {});
+  signal?.addEventListener('abort', () => {
+    off();
+    offAreas();
+  });
   return { el: card, refresh };
 }
 

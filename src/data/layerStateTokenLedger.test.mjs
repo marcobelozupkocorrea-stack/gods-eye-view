@@ -128,7 +128,7 @@ test('reservation ledger is complete, pinned, and rejects duplicate or malformed
     { ...parseLayerStateTokenReservations(reservationRows) },
     { ...LAYER_STATE_TOKEN_RESERVATIONS },
   );
-  assert.equal(Object.keys(LAYER_STATE_TOKEN_RESERVATIONS).length, 34);
+  assert.equal(Object.keys(LAYER_STATE_TOKEN_RESERVATIONS).length, 37);
   assert.deepEqual(
     { ...LAYER_STATE_TOKEN_RESERVATIONS },
     {
@@ -139,10 +139,17 @@ test('reservation ledger is complete, pinned, and rejects duplicate or malformed
       'deter-alerts': 'zd',
       'cemaden-alerts': 'ze',
       'brazil-radar': 'zf',
+      'traffic-incidents': 'zg',
+      'air-quality': 'zh',
+      'city-buses': 'zi',
     },
   );
   assert.throws(
-    () => parseLayerStateTokenReservations(reservationRows.slice(1)),
+    // Drop a legacy row (the fork's 'air-quality' now sorts first).
+    () =>
+      parseLayerStateTokenReservations(
+        reservationRows.filter(([id]) => id !== 'ais-live-vessels'),
+      ),
     /Missing or changed legacy/,
   );
   assert.throws(
@@ -277,7 +284,7 @@ test('PR B manually replaces provisional 3 with 4 after PR A publishes 3', () =>
     );
     const corrected = runCheck();
     assert.equal(corrected.status, 0, corrected.stderr);
-    assert.match(corrected.stdout, /35 published, 1 new/);
+    assert.match(corrected.stdout, /38 published, 1 new/);
   });
 });
 
@@ -371,7 +378,7 @@ test('an isolated valid two-character fixture round-trips an l field beyond the 
     const params = new URLSearchParams([['v', '2']]);
     codec.encodeLayerStateParams(params, state);
     assert.ok(params.get('l').length > 64, 'fixture must cross the old cap');
-    assert.equal(params.get('l').length, 84);
+    assert.equal(params.get('l').length, 93);
     const restored = codec.decodeLayerStateParams(params);
     assert.deepEqual(restored?.enabledLayerIds, expectedLayerIds);
     assert.deepEqual(restored?.options, state.options);
@@ -389,7 +396,7 @@ test('checker reads a complete future base ledger and rejects retired-token reus
     },
     (cwd) => {
       const published = readPublishedLayerStateReservations('HEAD', cwd);
-      assert.equal(Object.keys(published).length, 35);
+      assert.equal(Object.keys(published).length, 38);
       assert.equal(published['retired-layer'], '00');
       assert.throws(
         () =>

@@ -8,6 +8,12 @@ import {
   trafficStyleProfile,
 } from '../../data/trafficPresetStyle.js';
 import { TRAFFIC_TIMING_ENABLED } from './policy.js';
+import { flowBucket } from '../../data/trafficFlowStyle.js';
+import {
+  normalizeTrafficView,
+  trafficHonesty,
+  viewDrawsDots,
+} from './honesty.js';
 
 export function createControls({ state: layerState, services, parts, source }) {
   /** One status line: feed, drawn road source, then degraded-coverage notes. */
@@ -38,6 +44,21 @@ export function createControls({ state: layerState, services, parts, source }) {
   }
 
   const { getFlowSessionStats } = source;
+
+  /** Flow buckets of the roads currently drawn (roads-only view). */
+  function roadBucketCounts() {
+    const counts = { free: 0, slow: 0, jam: 0, sim: 0 };
+    const roads = parts.rendering.visibleRoadsForAltitude(
+      layerState._roads,
+      layerState._lastRenderAltitude,
+    );
+    for (const road of roads) {
+      const flow = layerState._liveMode ? road.flow : null;
+      if (flow?.closure) continue;
+      counts[flow ? flowBucket(flow.level) : 'sim'] += 1;
+    }
+    return counts;
+  }
 
   const methods = {
     id: 'traffic',
@@ -107,6 +128,17 @@ export function createControls({ state: layerState, services, parts, source }) {
           dot.mps *= ratio;
         }
       }
+      // barreto.top: roads in flow colour / dots / both.
+      const view = normalizeTrafficView(params.roadView);
+      if (view && view !== layerState.roadView()) {
+        layerState._roadView = view;
+        if (layerState._enabled && layerState._roads.length)
+          parts.rendering.renderRoadsForAltitude(
+            layerState._roads,
+            layerState._lastRenderAltitude,
+            'View',
+          );
+      }
       if (
         layerState._densityScale !== previousDensity &&
         layerState._enabled &&
@@ -168,14 +200,48 @@ export function createControls({ state: layerState, services, parts, source }) {
         hybrid: `TomTom roads first; OpenStreetMap fills the rest, simulated${needsKey}`,
       };
       const labels = { tomtom: 'TomTom', osm: 'OSM', hybrid: 'Hybrid' };
+      const chips = TRAFFIC_ROAD_MODES.map((mode) => ({
+        id: `roads-${mode}`,
+        label: labels[mode],
+        title: titles[mode],
+        active: mode === selected,
+        params: { roadMode: mode },
+      }));
+      if (!trafficHonesty.pt) return { chips };
+      // barreto.top: say plainly what is measured and what is illustration.
+      const view = layerState.roadView();
+      const views = [
+        ['vias', 'Vias', 'Só as vias, na cor do trânsito medido pelo TomTom'],
+        [
+          'ambos',
+          'Vias + fluxo',
+          'Vias coloridas e pontos animados (ilustrativos)',
+        ],
+        ['pontos', 'Só fluxo', 'Só os pontos animados (ilustrativos)'],
+      ];
       return {
-        chips: TRAFFIC_ROAD_MODES.map((mode) => ({
-          id: `roads-${mode}`,
-          label: labels[mode],
-          title: titles[mode],
-          active: mode === selected,
-          params: { roadMode: mode },
-        })),
+        chips: [
+          ...views.map(([id, label, title]) => ({
+            id: `view-${id}`,
+            label,
+            title,
+            active: view === id,
+            params: { roadView: id },
+          })),
+          ...chips,
+        ],
+        legend: [
+          { label: 'Livre', color: '#30d158' },
+          { label: 'Lento', color: '#ff9f0a' },
+          { label: 'Parado', color: '#ff3b30' },
+          { label: 'Bloqueado', color: '#7a1010' },
+          ...(viewDrawsDots(view)
+            ? [{ label: 'Sem dado (simulado)', color: '#e8eaed' }]
+            : []),
+        ],
+        info: viewDrawsDots(view)
+          ? 'Cor e velocidade: TomTom ao vivo. A quantidade de pontos é ilustrativa — não é contagem de veículos.'
+          : 'Cor de cada via: velocidade medida agora pelo TomTom (não é contagem de veículos).',
       };
     },
 
@@ -193,6 +259,8 @@ export function createControls({ state: layerState, services, parts, source }) {
      */
     getDetectableObjects(options = {}) {
       if (!layerState._enabled || layerState._dots.length === 0) return [];
+      // barreto.top: the dots are an illustration, never "detected vehicles".
+      if (trafficHonesty.honest) return [];
       const maxCount = Number.isFinite(options.maxCount)
         ? Math.max(1, Math.floor(options.maxCount))
         : layerState._dots.length;
@@ -283,7 +351,10 @@ export function createControls({ state: layerState, services, parts, source }) {
         Boolean(layerState._surfaceRefining) ||
         Boolean(layerState._populationPending) ||
         Boolean(layerState._heightPending);
-      const { free, slow, jam, sim } = layerState._bucketCounts;
+      // Roads-only view: coverage and counts come from the roads drawn.
+      const roadsOnly = !viewDrawsDots(layerState.roadView());
+      const counts = roadsOnly ? roadBucketCounts() : layerState._bucketCounts;
+      const { free, slow, jam, sim } = counts;
       const matched = free + slow + jam;
       const flowCoveragePct =
         matched + sim > 0 ? Math.round((100 * matched) / (matched + sim)) : 0;
@@ -296,7 +367,7 @@ export function createControls({ state: layerState, services, parts, source }) {
         roadSource: layerState._roadSource,
       });
       return {
-        count: layerState._count,
+        count: roadsOnly ? free + slow + jam : layerState._count,
         motion: { ...layerState._motion },
         surfaceBudgetOmitted: layerState._surfaceBudgetOmitted || 0,
         lastUpdate: layerState._lastUpdate,
@@ -319,7 +390,7 @@ export function createControls({ state: layerState, services, parts, source }) {
           : {}),
         // Per-bucket rendered-dot counts (sim = white ambient). Drives the
         // qa-traffic color assertions and the sync-chip mode label below.
-        flowBuckets: { ...layerState._bucketCounts },
+        flowBuckets: { ...counts },
         closedRoads: layerState._closedRoads,
         // Jam-viz prototype diagnostics (additive — harness contract untouched).
         heatLines: layerState._heatLineCount,

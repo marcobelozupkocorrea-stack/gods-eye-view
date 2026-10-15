@@ -587,6 +587,12 @@ export const LAYER_STATE_TOKEN_RESERVATIONS =
  */
 export const LAYER_STATE_REGISTRY = Object.freeze([
   Object.freeze({
+    // barreto.top fork-specific token (see inmet-alerts).
+    id: 'air-quality',
+    token: 'zh',
+    disposition: 'enabled-only',
+  }),
+  Object.freeze({
     id: 'ais-live-vessels',
     token: 'a',
     disposition: 'enabled-only',
@@ -623,6 +629,12 @@ export const LAYER_STATE_REGISTRY = Object.freeze([
     // barreto.top fork-specific token (see inmet-alerts).
     id: 'cemaden-alerts',
     token: 'ze',
+    disposition: 'enabled-only',
+  }),
+  Object.freeze({
+    // barreto.top fork-specific token (see inmet-alerts).
+    id: 'city-buses',
+    token: 'zi',
     disposition: 'enabled-only',
   }),
   Object.freeze({
@@ -719,6 +731,12 @@ export const LAYER_STATE_REGISTRY = Object.freeze([
     token: 't',
     disposition: 'enabled+options',
     optionOwner: 'traffic',
+  }),
+  Object.freeze({
+    // barreto.top fork-specific token (see inmet-alerts).
+    id: 'traffic-incidents',
+    token: 'zg',
+    disposition: 'enabled-only',
   }),
   Object.freeze({ id: 'transit', token: 'j', disposition: 'enabled-only' }),
   Object.freeze({

@@ -1,6 +1,7 @@
 import { normalizeRoadMode } from './roadModes.js';
 import * as Cesium from 'cesium';
 import { FLOW_BUCKET_COLORS, TRAFFIC_TIMING_ENABLED } from './policy.js';
+import { trafficHonesty } from './honesty.js';
 
 export function createState({ services }) {
   const layerState = {};
@@ -144,6 +145,17 @@ export function createState({ services }) {
   /** @type {'sim'|'hide'} Live-mode treatment of roads without flow data. */
 
   layerState._uncoveredMode = 'sim';
+
+  /**
+   * barreto.top: 'vias' (roads in flow colour, real data), 'ambos' or
+   * 'pontos' (animated dots only). Null = the configured default.
+   * @type {'vias'|'ambos'|'pontos'|null}
+   */
+  layerState._roadView = null;
+  layerState.roadView = () => layerState._roadView || trafficHonesty.view;
+  /** @type {Cesium.GroundPolylinePrimitive[]} Flow-coloured road lines. */
+  layerState._flowLinePrims = [];
+  layerState._flowLineCount = 0;
 
   /**
    * Jam-viz prototype mode: 'density' = deep-jam density boost + platoon queues

@@ -3866,3 +3866,175 @@ body.barreto-app.barreto-sheet-open #barreto-timeline {
     width: 360px;
   }
 }
+
+/* ---------- Previsão e ar no "Perto de você" ---------- */
+.al-weather {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(140, 200, 255, 0.12);
+}
+
+.al-wx-now {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.al-wx-icon {
+  color: #ffd60a;
+  font-size: 34px !important;
+}
+
+.al-wx-temp {
+  color: var(--text-primary);
+  font: 700 30px/1 var(--font-sans);
+}
+
+.al-wx-desc {
+  display: flex;
+  flex-direction: column;
+  color: var(--text-primary);
+  font: 13.5px var(--font-sans);
+}
+
+.al-wx-desc small {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.al-wx-rain {
+  margin: 0;
+  color: var(--text-primary);
+  font: 600 13px var(--font-sans);
+}
+
+.al-wx-hours {
+  display: flex;
+  gap: 6px;
+  margin: 0 -4px;
+  padding: 2px 4px 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.al-wx-hours::-webkit-scrollbar {
+  display: none;
+}
+
+.al-wx-hour {
+  display: flex;
+  flex: 0 0 52px;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 0;
+  color: var(--text-primary);
+  font: 12px var(--font-sans);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+}
+
+.al-wx-hour small,
+.al-wx-day small {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.al-wx-hour small.wet,
+.al-wx-day small.wet {
+  color: #64d2ff;
+  font-weight: 700;
+}
+
+.al-wx-hicon {
+  color: #ffd60a;
+  font-size: 20px !important;
+}
+
+.al-wx-days[hidden] {
+  display: none;
+}
+
+.al-wx-days {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.al-wx-day {
+  display: grid;
+  grid-template-columns: 5.5rem 24px 1fr auto;
+  gap: 4px 8px;
+  align-items: center;
+  color: var(--text-primary);
+  font: 12.5px var(--font-sans);
+}
+
+.al-wx-day small {
+  grid-column: 3 / 5;
+}
+
+.al-wx-dname {
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}
+
+.al-wx-air {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+  color: var(--text-secondary);
+  font: 12px var(--font-sans);
+}
+
+/* ---------- Áreas no diálogo de notificações ---------- */
+.barreto-notify-areas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-left: 28px;
+}
+
+.barreto-notify-areas:empty {
+  display: none;
+}
+
+.barreto-notify-area {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 2px 2px 8px;
+  color: var(--text-primary);
+  font: 13px var(--font-sans);
+  background: rgba(57, 208, 255, 0.1);
+  border-radius: 999px;
+}
+
+.barreto-notify-area .material-symbols-outlined {
+  color: var(--accent);
+  font-size: 16px;
+}
+
+.barreto-notify-area button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  color: var(--text-secondary);
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.barreto-notify-area button .material-symbols-outlined {
+  color: inherit;
+}
+
+.barreto-notify-row .al-link {
+  margin-left: auto;
+}

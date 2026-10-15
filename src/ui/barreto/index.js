@@ -4,6 +4,7 @@
  * welcome card. Replaces the upstream first-run launcher there.
  */
 import { initAppShell } from './appShell.js';
+import { installAreasOverlay } from './areas.js';
 import { initBrasilPanel } from './brasilPanel.js';
 import {
   installBrazilCities,
@@ -69,6 +70,7 @@ export function initBarretoExperience({ styleManager, dataManager } = {}) {
   });
   initMapMenu({ styleManager, routePlanner, signal });
   installViewsButton({ styleManager, signal });
+  installAreasOverlay({ styleManager, signal });
   installTimelineButton(timeline, { signal });
   registerServiceWorker();
   initWelcome({ styleManager, dataManager, brasilPanel, help, signal });

@@ -505,6 +505,47 @@ export function cctvUpstreamUserAgent(url) {
 }
 
 /**
+ * barreto.top: image hosts whose frames come from a form POST. The registered
+ * source URL carries the form fields as query parameters (Praia Grande:
+ * `…/get-snapshot/slideshow/{Name}?Server=…`); only this exact host and path
+ * prefix turn into a POST, everything else stays a plain GET.
+ */
+const CCTV_IMAGE_POST_HOSTS = Object.freeze({
+  'cameras.praiagrande.sp.gov.br': (u) => {
+    const prefix = '/aovivo/get-snapshot/slideshow/';
+    if (!u.pathname.startsWith(prefix)) return null;
+    const name = decodeURIComponent(u.pathname.slice(prefix.length));
+    const server = u.searchParams.get('Server') || '';
+    if (!name || !/^server-\d{1,3}$/.test(server)) return null;
+    return {
+      url: `${u.origin}${u.pathname}`,
+      init: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ Server: server, Name: name }).toString(),
+      },
+    };
+  },
+});
+
+/** POST request for a frame on a POST-only host, or null for a plain GET. */
+export function cctvUpstreamRequest(url) {
+  try {
+    const u = new URL(url);
+    return CCTV_IMAGE_POST_HOSTS[u.hostname]?.(u) || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Some hosts label JPEG frames as image/x-icon; trust the bytes. */
+export function frameContentType(body, declared) {
+  if (body?.[0] === 0xff && body?.[1] === 0xd8 && body?.[2] === 0xff)
+    return 'image/jpeg';
+  return declared;
+}
+
+/**
  * Fetch one upstream CCTV image within the frame-refresh budget.
  *
  * A timeout is treated like every other upstream miss so the caller can
@@ -534,10 +575,15 @@ export async function fetchCctvImageFromUpstream(
     );
   }, timeoutMs);
   try {
+    const post = cctvUpstreamRequest(url);
     const upstream = await fetchWithinHost(
-      url,
+      post?.url || url,
       {
-        headers: { 'User-Agent': cctvUpstreamUserAgent(url) },
+        ...(post?.init || {}),
+        headers: {
+          ...(post?.init?.headers || {}),
+          'User-Agent': cctvUpstreamUserAgent(url),
+        },
         signal: controller.signal,
       },
       fetchImpl,
@@ -550,7 +596,7 @@ export async function fetchCctvImageFromUpstream(
     }
     const body = await readCappedResponseBytes(upstream, maxBytes);
     if (!body) return null;
-    return { ok: true, body, contentType };
+    return { ok: true, body, contentType: frameContentType(body, contentType) };
   } catch {
     return null;
   } finally {

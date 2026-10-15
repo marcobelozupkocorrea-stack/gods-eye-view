@@ -190,7 +190,8 @@
       "scripts/google-server-key.mjs",
       "src/data/cctvFootprint.js",
       "src/sources/cctvTypes.js",
-      "src/sources/httpBody.js"
+      "src/sources/httpBody.js",
+      "server/providers/cctv/brazilMore.js"
     ],
     "external": []
   },
@@ -683,7 +684,8 @@
       "src/ui/localSdrPresentation.js",
       "src/data/cameraArrival.js",
       "src/ui/ptBr.js",
-      "src/layers/firms/source.js"
+      "src/layers/firms/source.js",
+      "src/layers/traffic/honesty.js"
     ],
     "external": ["cesium"]
   },
@@ -1137,7 +1139,8 @@
       "src/sources/militaryTileGeometry.js",
       "src/sources/vectorTiles.js",
       "src/sources/phaseTiming.js",
-      "src/layers/traffic/roadModes.js"
+      "src/layers/traffic/roadModes.js",
+      "src/layers/traffic/honesty.js"
     ],
     "external": ["cesium", "pbf", "@mapbox/vector-tile"]
   },
@@ -2266,7 +2269,12 @@
       "src/ui/barreto/timeline.js",
       "src/ui/barreto/alertsApi.js",
       "src/ui/barreto/alertsViews.js",
-      "src/ui/barreto/mapMenu.js"
+      "src/ui/barreto/mapMenu.js",
+      "src/ui/barreto/areas.js",
+      "src/layers/buses/index.js",
+      "src/layers/trafficIncidents/index.js",
+      "src/layers/airQuality/index.js",
+      "src/layers/traffic/honesty.js"
     ],
     "external": [
       "hls.js",
@@ -2805,7 +2813,11 @@
       "src/data/deter.js",
       "src/layers/points/cards.js",
       "src/layers/points/index.js",
-      "src/layers/brazilRadar/index.js"
+      "src/layers/brazilRadar/index.js",
+      "src/layers/trafficIncidents/index.js",
+      "src/layers/airQuality/index.js",
+      "src/layers/buses/index.js",
+      "src/layers/traffic/honesty.js"
     ],
     "external": [
       "hls.js",
@@ -2909,7 +2921,8 @@
       "src/ui/shareRestoration.js",
       "src/ui/uiLifetime.js",
       "src/ui/ptBr.js",
-      "src/layers/firms/source.js"
+      "src/layers/firms/source.js",
+      "src/layers/traffic/honesty.js"
     ],
     "external": []
   },

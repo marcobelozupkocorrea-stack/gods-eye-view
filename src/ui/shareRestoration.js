@@ -5,12 +5,14 @@ import { UiLifetime } from './uiLifetime.js';
 import { firstVisitLayerIds, isPortugueseUi } from './ptBr.js';
 import { setCloudsProductDefault } from '../data/layerState.js';
 import { SOUTH_AMERICA_BBOX, setFirmsRegion } from '../layers/firms/source.js';
+import { configureTrafficForBrazil } from '../layers/traffic/honesty.js';
 
 // barreto.top: pt-BR starts satellite clouds on CPTEC's South America frames
 // and cuts the fire feed to South America.
 if (isPortugueseUi()) {
   setCloudsProductDefault('clouds-br');
   setFirmsRegion(SOUTH_AMERICA_BBOX);
+  configureTrafficForBrazil();
 }
 
 /** Own initial share restoration, durable layer state and restoration notices. */

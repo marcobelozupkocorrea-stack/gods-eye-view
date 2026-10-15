@@ -21,6 +21,12 @@ import {
   loadVegvesenSourcesFromOpenData,
 } from './sources.js';
 import { loadDerSpSources, loadCetSpSources } from './brazil.js';
+import {
+  loadDaerRsSources,
+  loadItanhaemSources,
+  loadPraiaGrandeSources,
+  loadRecifeSources,
+} from './brazilMore.js';
 
 /** Env kill switch: unset or anything but "0" means enabled. */
 const envEnabled = (name) => String(process.env[name] || '1').trim() !== '0';
@@ -109,6 +115,27 @@ const LIVE_PACKS = [
     name: 'cetsp',
     enabled: () => envEnabled('CCTV_CETSP_ENABLED'),
     load: () => loadCetSpSources(),
+  },
+  // barreto.top: more Brazilian packs (server/providers/cctv/brazilMore.js).
+  {
+    name: 'recife',
+    enabled: () => envEnabled('CCTV_RECIFE_ENABLED'),
+    load: () => loadRecifeSources(),
+  },
+  {
+    name: 'praiagrande',
+    enabled: () => envEnabled('CCTV_PRAIAGRANDE_ENABLED'),
+    load: () => loadPraiaGrandeSources(),
+  },
+  {
+    name: 'itanhaem',
+    enabled: () => envEnabled('CCTV_ITANHAEM_ENABLED'),
+    load: () => loadItanhaemSources(),
+  },
+  {
+    name: 'daerrs',
+    enabled: () => envEnabled('CCTV_DAERRS_ENABLED'),
+    load: () => loadDaerRsSources(),
   },
 ];
 /**

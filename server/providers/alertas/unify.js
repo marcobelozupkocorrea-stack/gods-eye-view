@@ -420,10 +420,68 @@ export function citiesOfState(alerts, uf, index) {
 }
 
 /** Alerts that cover a point, merged, plus the municipality there. */
-export function alertsNear(alerts, lat, lon, index) {
+/**
+ * Does an alert touch a circular area (centre + radius)? It covers the
+ * centre, or one of its municipalities / its point lies within the radius.
+ */
+export function alertInArea(alert, lat, lon, radiusKm, index, cityCode = null) {
+  if (
+    alertCovers(alert, lat, lon, { cityCode, nearKm: Math.max(12, radiusKm) })
+  )
+    return true;
+  if (!radiusKm) return false;
+  // Quick reject on the bounding box, padded by the radius.
+  const padLat = radiusKm / 111;
+  const padLon =
+    radiusKm / (111 * Math.max(0.2, Math.cos((lat * Math.PI) / 180)));
+  const [w, s, e, n] = alert.bbox;
+  if (
+    lon < w - padLon ||
+    lon > e + padLon ||
+    lat < s - padLat ||
+    lat > n + padLat
+  )
+    return false;
+  for (const code of alert.cities) {
+    const m = index.byCode.get(code);
+    if (m && distanceKm(lat, lon, m.lat, m.lon) <= radiusKm) return true;
+  }
+  if (
+    alert.polygons &&
+    distanceToPolygonsKm(lat, lon, alert.polygons) <= radiusKm
+  )
+    return true;
+  return false;
+}
+
+/** Shortest distance (km) from a point to the outer edges of polygons. */
+export function distanceToPolygonsKm(lat, lon, polygons) {
+  const kx = 111 * Math.max(0.2, Math.cos((lat * Math.PI) / 180));
+  const ky = 111;
+  let best = Infinity;
+  for (const polygon of polygons || []) {
+    const ring = polygon?.[0] || [];
+    for (let i = 1; i < ring.length; i += 1) {
+      const ax = (ring[i - 1][0] - lon) * kx;
+      const ay = (ring[i - 1][1] - lat) * ky;
+      const bx = (ring[i][0] - lon) * kx;
+      const by = (ring[i][1] - lat) * ky;
+      const dx = bx - ax;
+      const dy = by - ay;
+      const len2 = dx * dx + dy * dy;
+      const t = len2
+        ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2))
+        : 0;
+      best = Math.min(best, Math.hypot(ax + t * dx, ay + t * dy));
+    }
+  }
+  return best;
+}
+
+export function alertsNear(alerts, lat, lon, index, radiusKm = 0) {
   const city = index.nearest(lat, lon);
   const hits = alerts.filter((a) =>
-    alertCovers(a, lat, lon, { cityCode: city?.code }),
+    alertInArea(a, lat, lon, radiusKm, index, city?.code),
   );
   return {
     lugar: city ? { code: city.code, nome: city.nome, uf: city.uf } : null,

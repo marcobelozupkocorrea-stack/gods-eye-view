@@ -12,6 +12,7 @@ import {
   untilText,
 } from './alertsApi.js';
 import { addFavorite, escapeHtml, reversePlace } from './places.js';
+import { promptNewArea } from './areas.js';
 
 const HOLD_MS = 550;
 const MOVE_PX = 10;
@@ -65,6 +66,7 @@ export function initMapMenu({ styleManager, routePlanner, signal } = {}) {
       <header><b class="barreto-mapmenu-name">Este ponto</b><small>${coords}</small></header>
       <button type="button" role="menuitem" data-act="route"><span class="material-symbols-outlined" aria-hidden="true">directions</span>Rota até aqui</button>
       <button type="button" role="menuitem" data-act="save"><span class="material-symbols-outlined" aria-hidden="true">star</span>Salvar em Meus lugares</button>
+      <button type="button" role="menuitem" data-act="area"><span class="material-symbols-outlined" aria-hidden="true">radio_button_checked</span>Criar área de interesse aqui</button>
       <button type="button" role="menuitem" data-act="copy"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span>Copiar coordenadas</button>
       <div class="barreto-mapmenu-alerts"><small>Vendo alertas aqui…</small></div>`;
     menu.hidden = false;
@@ -125,6 +127,8 @@ export function initMapMenu({ styleManager, routePlanner, signal } = {}) {
         spot.name || '',
       );
       if (name && name.trim()) await addFavorite(place, name.trim());
+    } else if (act === 'area') {
+      await promptNewArea(place).catch(() => {});
     } else if (act === 'copy') {
       try {
         await navigator.clipboard.writeText(

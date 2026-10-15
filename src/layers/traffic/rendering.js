@@ -10,6 +10,7 @@ import {
   HEAT_LINE_SLOW_WIDTH,
   TRAFFIC_TIMING_ENABLED,
 } from './policy.js';
+import { viewDrawsDots, viewDrawsLines } from './honesty.js';
 
 export function createRendering({
   state: layerState,
@@ -34,9 +35,90 @@ export function createRendering({
       : roads;
   }
 
+  // ---- barreto.top: roads drawn in their live flow colour (real data) ----
+  const FLOW_LINE_STYLE = Object.freeze({
+    free: { color: '#30d158', alpha: 0.8 },
+    slow: { color: '#ff9f0a', alpha: 0.92 },
+    jam: { color: '#ff3b30', alpha: 0.95 },
+    closed: { color: '#7a1010', alpha: 0.95 },
+  });
+  const FLOW_LINE_CAP = 2500;
+  const flowLineWidth = (type, bucket) =>
+    (type === 'motorway' || type === 'trunk' ? 6 : type === 'primary' ? 5 : 3) +
+    (bucket === 'jam' || bucket === 'closed' ? 1 : 0);
+
+  function removeFlowLines() {
+    for (const prim of layerState._flowLinePrims || [])
+      layerState._viewer?.scene.groundPrimitives.remove(prim);
+    layerState._flowLinePrims = [];
+    layerState._flowLineCount = 0;
+  }
+
+  /** Only roads TomTom has flow for: a coloured line is a measured speed. */
+  function rebuildFlowLines(roads) {
+    removeFlowLines();
+    if (
+      !layerState._viewer ||
+      !layerState._liveMode ||
+      !layerState.roadView ||
+      !viewDrawsLines(layerState.roadView())
+    )
+      return;
+    if (layerState._heatSupported === null)
+      layerState._heatSupported = Cesium.GroundPolylinePrimitive.isSupported(
+        layerState._viewer.scene,
+      );
+    if (!layerState._heatSupported) return;
+    const groups = { free: [], slow: [], jam: [], closed: [] };
+    let count = 0;
+    for (const road of roads) {
+      const flow = road.flow;
+      if (!flow || !road.waypoints || road.waypoints.length < 2) continue;
+      const bucket = flow.closure ? 'closed' : flowBucket(flow.level);
+      if (count >= FLOW_LINE_CAP && bucket === 'free') continue;
+      groups[bucket].push(
+        new Cesium.GeometryInstance({
+          geometry: new Cesium.GroundPolylineGeometry({
+            positions: road.waypoints,
+            width: flowLineWidth(road.type, bucket),
+          }),
+        }),
+      );
+      count += 1;
+    }
+    for (const [bucket, instances] of Object.entries(groups)) {
+      if (!instances.length) continue;
+      const style = FLOW_LINE_STYLE[bucket];
+      const material =
+        bucket === 'closed'
+          ? Cesium.Material.fromType('PolylineDash', {
+              color: Cesium.Color.fromCssColorString(style.color).withAlpha(
+                style.alpha,
+              ),
+              dashLength: 12,
+            })
+          : Cesium.Material.fromType('Color', {
+              color: Cesium.Color.fromCssColorString(style.color).withAlpha(
+                style.alpha,
+              ),
+            });
+      layerState._flowLinePrims.push(
+        layerState._viewer.scene.groundPrimitives.add(
+          new Cesium.GroundPolylinePrimitive({
+            geometryInstances: instances,
+            classificationType: Cesium.ClassificationType.BOTH,
+            appearance: new Cesium.PolylineMaterialAppearance({ material }),
+          }),
+        ),
+      );
+    }
+    layerState._flowLineCount = count;
+  }
+
   /** Remove both heat-line ground primitives from the scene. */
 
   function removeHeatLines() {
+    removeFlowLines();
     if (layerState._heatJamPrim) {
       layerState._viewer?.scene.groundPrimitives.remove(
         layerState._heatJamPrim,
@@ -66,6 +148,10 @@ export function createRendering({
 
   function rebuildHeatLines(roads) {
     removeHeatLines();
+    rebuildFlowLines(roads);
+    // Heat-lines would double the flow lines; they only dress up the dots.
+    if (layerState.roadView && !viewDrawsDots(layerState.roadView())) return;
+    if (layerState._flowLinePrims?.length) return;
     if (
       !layerState._viewer ||
       !layerState._liveMode ||
@@ -313,6 +399,7 @@ export function createRendering({
     visibleRoadsForAltitude,
     removeHeatLines,
     rebuildHeatLines,
+    rebuildFlowLines,
     renderRoadsForAltitude,
   };
 }

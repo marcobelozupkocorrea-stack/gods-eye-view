@@ -368,6 +368,7 @@ export function createFlow({ state: layerState, services, parts, source }) {
       selected,
       altitude,
       roadDotBudget(altitude),
+      { admission: true },
     );
     const admitted = selected.filter((r, i) => budgets[i] > 0);
     const camera = layerState._viewer.camera?.positionWC;

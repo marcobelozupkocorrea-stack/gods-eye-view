@@ -8,9 +8,11 @@ import {
   pushPrefs,
   pushState,
   pushSubscribe,
+  pushSummaryNow,
   pushTest,
   pushUnsubscribe,
 } from './alertsApi.js';
+import { removeArea } from './areas.js';
 
 const el = (tag, attrs = {}, children = []) => {
   const node = document.createElement(tag);
@@ -188,6 +190,83 @@ export function initNotifySettings({ signal } = {}) {
     return s;
   }
 
+  function areaList() {
+    const box = el('div', { className: 'barreto-notify-areas' });
+    for (const a of state.areas || []) {
+      const x = el(
+        'button',
+        { type: 'button', 'aria-label': `Apagar a área ${a.nome}` },
+        [
+          el('span', {
+            className: 'material-symbols-outlined',
+            'aria-hidden': 'true',
+            text: 'close',
+          }),
+        ],
+      );
+      x.addEventListener('click', async () => {
+        await removeArea(a.nome).catch(() => {});
+        state.areas = (state.areas || []).filter((b) => b.nome !== a.nome);
+        render();
+      });
+      box.append(
+        el('span', { className: 'barreto-notify-area' }, [
+          el('span', {
+            className: 'material-symbols-outlined',
+            'aria-hidden': 'true',
+            text: 'radio_button_checked',
+          }),
+          el('span', { text: `${a.nome} · ${a.raioKm} km` }),
+          x,
+        ]),
+      );
+    }
+    return box;
+  }
+  function summaryHour() {
+    const hora = state.prefs.resumo?.hora ?? 7;
+    const s = el(
+      'select',
+      { className: 'brasil-select', 'aria-label': 'Hora do resumo' },
+      [4, 5, 6, 7, 8, 9, 10, 11, 12].map((h) =>
+        el('option', {
+          value: String(h),
+          text: `${String(h).padStart(2, '0')}h`,
+          selected: h === hora,
+        }),
+      ),
+    );
+    s.addEventListener(
+      'change',
+      () =>
+        void save({
+          resumo: { ...(state.prefs.resumo || {}), hora: Number(s.value) },
+        }),
+    );
+    return s;
+  }
+  function summaryNow() {
+    const b = el('button', {
+      type: 'button',
+      className: 'al-link',
+      hidden: !subscribed,
+      text: 'Enviar um agora',
+    });
+    b.addEventListener('click', async () => {
+      try {
+        const r = await pushSummaryNow();
+        message(
+          r.enviados
+            ? 'Resumo enviado.'
+            : 'Nada para resumir: salve lugares ou crie áreas.',
+        );
+      } catch {
+        message('Falhou ao enviar o resumo.');
+      }
+    });
+    return b;
+  }
+
   function render() {
     const support = pushSupport();
     const p = state.prefs;
@@ -304,6 +383,28 @@ export function initNotifySettings({ signal } = {}) {
         (v) => void save({ usarLocal: v }),
         'Atualizada quando o app está aberto (precisão de ~1 km).',
       ),
+      check(
+        'Minhas áreas',
+        p.usarAreas !== false,
+        (v) => void save({ usarAreas: v }),
+        state.areas?.length
+          ? 'Alertas que tocam qualquer parte da área contam.'
+          : 'Crie uma área segurando o dedo no mapa (botão direito no computador) → "Criar área de interesse aqui".',
+      ),
+      areaList(),
+      el('h3', { text: 'Resumo da manhã' }),
+      check(
+        'Receber um resumo por dia',
+        !!p.resumo?.ativo,
+        (v) =>
+          void save({ resumo: { ...(p.resumo || { hora: 7 }), ativo: v } }),
+        'Previsão do dia, alertas e ocorrências de trânsito das suas áreas e lugares.',
+      ),
+      el('div', { className: 'barreto-notify-row' }, [
+        el('span', { text: 'às' }),
+        summaryHour(),
+        summaryNow(),
+      ]),
       el('h3', { text: 'Silêncio' }),
       check(
         'Silêncio à noite',

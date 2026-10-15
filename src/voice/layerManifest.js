@@ -317,6 +317,30 @@ const layers = [
     noQuery: 'map overlay; no countable records',
   },
   {
+    id: 'traffic-incidents',
+    aliases: [
+      'ocorrências',
+      'acidentes',
+      'obras',
+      'bloqueios',
+      'traffic incidents',
+    ],
+    context: false,
+    noQuery: 'map overlay; no countable records',
+  },
+  {
+    id: 'city-buses',
+    aliases: ['ônibus', 'onibus', 'brt', 'ônibus em tempo real'],
+    context: false,
+    noQuery: 'map overlay; no countable records',
+  },
+  {
+    id: 'air-quality',
+    aliases: ['qualidade do ar', 'poluição', 'air quality'],
+    context: false,
+    noQuery: 'map overlay; no countable records',
+  },
+  {
     id: 'brazil-radar',
     aliases: [
       'radar brasil',

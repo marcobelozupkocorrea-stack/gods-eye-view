@@ -12,6 +12,9 @@ import {
   cemadenSheet,
   deterSheet,
   earthquakeSheet,
+  incidentSheet,
+  airSheet,
+  busSheet,
   fireSheet,
   satelliteSheet,
   vesselSheet,
@@ -60,6 +63,20 @@ export function renderSheetHtml(s) {
     ${sections || '<p class="barreto-details-loading">Sem detalhes disponíveis.</p>'}
     ${links ? `<nav class="barreto-details-links" aria-label="Ver em outros sites">${links}</nav>` : ''}
     ${s.note ? `<p class="barreto-details-note">${escapeHtml(s.note)}</p>` : ''}`;
+}
+
+/** Entity id prefix → layer, for layers without their own click handling. */
+const PICK_PREFIXES = {
+  'earthquake:': 'earthquakes',
+  'incidente:': 'traffic-incidents',
+  'ar:': 'air-quality',
+  'onibus:': 'city-buses',
+};
+/** Extra sheets registered by other barreto modules (buses, air quality…). */
+const PICK_SHEETS = { 'air-quality': airSheet, 'city-buses': busSheet };
+export function registerPickSheet(prefix, layerId, build) {
+  PICK_PREFIXES[prefix] = layerId;
+  PICK_SHEETS[layerId] = build;
 }
 
 export function initDetailsSheet({ dataManager, styleManager, signal } = {}) {
@@ -279,7 +296,11 @@ export function initDetailsSheet({ dataManager, styleManager, signal } = {}) {
               ? () => deterSheet(record)
               : layerId === 'earthquakes'
                 ? () => earthquakeSheet(record)
-                : null;
+                : layerId === 'traffic-incidents'
+                  ? () => incidentSheet(record)
+                  : PICK_SHEETS[layerId]
+                    ? () => PICK_SHEETS[layerId](record)
+                    : null;
     if (build) open({ layerId, id: String(id), build });
   }
 
@@ -299,13 +320,18 @@ export function initDetailsSheet({ dataManager, styleManager, signal } = {}) {
       }
       const entity = picked?.id;
       const id = typeof entity?.id === 'string' ? entity.id : '';
-      if (id.startsWith('earthquake:')) {
+      const prefix = Object.keys(PICK_PREFIXES).find((p) => id.startsWith(p));
+      if (prefix) {
         const record = entity.properties?.barreto?.getValue?.(
           Cesium.JulianDate.now(),
         );
         if (record)
-          openRecord({ layerId: 'earthquakes', id: id.slice(11), record });
-      } else if (current?.layerId === 'earthquakes') {
+          openRecord({
+            layerId: PICK_PREFIXES[prefix],
+            id: id.slice(prefix.length).replace(/:linha$/, ''),
+            record,
+          });
+      } else if (Object.values(PICK_PREFIXES).includes(current?.layerId)) {
         close();
       }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);

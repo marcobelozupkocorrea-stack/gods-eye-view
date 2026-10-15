@@ -13,7 +13,7 @@
 import { createHash } from 'node:crypto';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
-import { alertCovers, KIND_LABEL, LEVELS, SOURCE_LABEL } from './unify.js';
+import { alertInArea, KIND_LABEL, LEVELS, SOURCE_LABEL } from './unify.js';
 
 const REPEAT_MS = 6 * 3_600_000;
 const LOCATION_MAX_AGE_MS = 3 * 86_400_000;
@@ -34,7 +34,31 @@ export const DEFAULT_PREFS = Object.freeze({
   usarLugares: true,
   usarLocal: false,
   local: null,
+  usarAreas: true,
+  resumo: { ativo: false, hora: 7 },
 });
+
+/** Areas of interest: a named centre with a radius (km). Max 10. */
+export function cleanAreas(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const a of list) {
+    const lat = Number(a?.lat);
+    const lon = Number(a?.lon);
+    const raioKm = Math.round(Number(a?.raioKm));
+    const nome = typeof a?.nome === 'string' ? a.nome.trim().slice(0, 40) : '';
+    if (!nome || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    if (Math.abs(lat) > 90 || Math.abs(lon) > 180) continue;
+    out.push({
+      nome,
+      lat: Number(lat.toFixed(5)),
+      lon: Number(lon.toFixed(5)),
+      raioKm: Number.isFinite(raioKm) ? Math.max(1, Math.min(100, raioKm)) : 5,
+    });
+    if (out.length >= 10) break;
+  }
+  return out;
+}
 
 /** Validate preferences sent by the browser. */
 export function cleanPrefs(input, previous = DEFAULT_PREFS) {
@@ -54,6 +78,17 @@ export function cleanPrefs(input, previous = DEFAULT_PREFS) {
     }
     if ('usarLugares' in input) p.usarLugares = !!input.usarLugares;
     if ('usarLocal' in input) p.usarLocal = !!input.usarLocal;
+    if ('usarAreas' in input) p.usarAreas = !!input.usarAreas;
+    if (input.resumo && typeof input.resumo === 'object') {
+      const hora = Number(input.resumo.hora);
+      p.resumo = {
+        ativo: !!input.resumo.ativo,
+        hora:
+          Number.isInteger(hora) && hora >= 4 && hora <= 12
+            ? hora
+            : (p.resumo?.hora ?? 7),
+      };
+    }
     if (!p.usarLocal) p.local = null;
   }
   return p;
@@ -90,7 +125,7 @@ const TIME_FMT = new Intl.DateTimeFormat('pt-BR', {
  * @param {ReturnType<import('./unify.js').indexMunicipios>} index
  */
 export function notificationsFor(
-  { hash, prefs, favorites, sent },
+  { hash, prefs, favorites, areas = [], sent },
   alerts,
   index,
   at,
@@ -110,6 +145,9 @@ export function notificationsFor(
       lon: prefs.local.lon,
       mine: true,
     });
+  if (prefs.usarAreas !== false)
+    for (const a of areas || [])
+      places.push({ name: a.nome, lat: a.lat, lon: a.lon, raioKm: a.raioKm });
   if (!places.length) return [];
   const quiet = inQuietHours(prefs.silencio, at);
   const best = new Map();
@@ -118,7 +156,16 @@ export function notificationsFor(
     for (const a of alerts) {
       if (a.rank < prefs.minRank) continue;
       if (quiet && a.rank < 3) continue;
-      if (!alertCovers(a, place.lat, place.lon, { cityCode: city?.code }))
+      if (
+        !alertInArea(
+          a,
+          place.lat,
+          place.lon,
+          place.raioKm || 0,
+          index,
+          city?.code,
+        )
+      )
         continue;
       const key = `${hash}|${place.mine ? '@local' : place.name}|${a.kind}`;
       const previous = sent.get(key);
@@ -212,16 +259,28 @@ export function createPush({
       return {
         subs: Array.isArray(u.subs) ? u.subs : [],
         prefs: cleanPrefs(null, { ...DEFAULT_PREFS, ...u.prefs }),
+        areas: cleanAreas(u.areas),
+        resumoEm: typeof u.resumoEm === 'string' ? u.resumoEm : null,
       };
     } catch {
-      return { subs: [], prefs: { ...DEFAULT_PREFS } };
+      return {
+        subs: [],
+        prefs: { ...DEFAULT_PREFS },
+        areas: [],
+        resumoEm: null,
+      };
     }
   }
   async function writeUser(hash, user) {
     await fsp.mkdir(usersDir, { recursive: true });
     await fsp.writeFile(
       userFile(hash),
-      JSON.stringify({ subs: user.subs, prefs: user.prefs }),
+      JSON.stringify({
+        subs: user.subs,
+        prefs: user.prefs,
+        areas: user.areas || [],
+        resumoEm: user.resumoEm || null,
+      }),
       'utf8',
     );
   }
@@ -243,7 +302,67 @@ export function createPush({
       inscrito: user.subs.length,
       prefs: user.prefs,
       lugares: (await favoritesOf(hash)).map((f) => f.name),
+      areas: user.areas,
     };
+  }
+
+  async function getAreas(hash) {
+    return (await readUser(hash)).areas;
+  }
+  async function setAreas(hash, list) {
+    const user = await readUser(hash);
+    user.areas = cleanAreas(list);
+    await writeUser(hash, user);
+    return user.areas;
+  }
+
+  /**
+   * Morning summary: for everyone who asked for it at this hour and has not
+   * had it today, `compose(user)` builds the notification.
+   */
+  async function sendSummaries(compose, { force = null } = {}) {
+    let files = [];
+    try {
+      files = (await fsp.readdir(usersDir)).filter((f) => f.endsWith('.json'));
+    } catch {
+      return 0;
+    }
+    const at = now();
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Sao_Paulo',
+    }).format(new Date(at));
+    const hour = hourInBrazil(at);
+    let sentCount = 0;
+    for (const file of files) {
+      const hash = file.slice(0, -5);
+      if (force && hash !== force) continue;
+      const user = await readUser(hash);
+      if (!user.subs.length) continue;
+      if (!force) {
+        if (!user.prefs.resumo?.ativo) continue;
+        if (user.resumoEm === today || hour !== user.prefs.resumo.hora)
+          continue;
+      }
+      let payload = null;
+      try {
+        payload = await compose({
+          prefs: user.prefs,
+          favorites: await favoritesOf(hash),
+          areas: user.areas,
+        });
+      } catch (err) {
+        log.warn?.('[push] resumo:', err?.message || err);
+      }
+      if (!payload) continue;
+      if (await sendTo(hash, user, payload)) {
+        sentCount += 1;
+        if (!force) {
+          user.resumoEm = today;
+          await writeUser(hash, user);
+        }
+      }
+    }
+    return sentCount;
   }
 
   async function subscribe(hash, sub, ua) {
@@ -350,7 +469,13 @@ export function createPush({
       const user = await readUser(hash);
       if (!user.subs.length) continue;
       const list = notificationsFor(
-        { hash, prefs: user.prefs, favorites: await favoritesOf(hash), sent },
+        {
+          hash,
+          prefs: user.prefs,
+          favorites: await favoritesOf(hash),
+          areas: user.areas,
+          sent,
+        },
         alerts,
         index,
         at,
@@ -378,5 +503,8 @@ export function createPush({
     setLocation,
     test,
     dispatch,
+    getAreas,
+    setAreas,
+    sendSummaries,
   };
 }
